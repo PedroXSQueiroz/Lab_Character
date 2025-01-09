@@ -20,21 +20,21 @@ public:
 	// Sets default values for this character's properties
 	ABaseCharacters();
 
-	//STATEFULL_INPUT(Demo)
-
-	/*UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	UInputAction* Demo_Input;*/
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UInputMappingContext* DefaultMappingContext;
 
 	void CleanAnimStatesCache();
 
+	UFUNCTION(BlueprintCallable)
+	FString GetCurrentStateName();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UPROPERTY()
+	bool IsAIControlled;
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
