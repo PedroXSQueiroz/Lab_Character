@@ -18,12 +18,6 @@ class LAB_CHARACTER_API ULabMovementAnimInstance : public ULabAnimInstance
 	GENERATED_BODY()
 	
 public:
-
-	/*UFUNCTION(BlueprintCallable)
-	FStoppingEvent& GetStoppingEvent() 
-	{
-		return this->StoppingEvent;
-	}*/
 	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnStoppingEvent OnStoppingEvent;

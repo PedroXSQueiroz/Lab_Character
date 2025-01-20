@@ -23,6 +23,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TArray<FName> ActiveAnimParams;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool IsInitial;
+
 	virtual bool Init(AActor* actor, bool first = false) override;
 
 	virtual bool Exit(AActor* actor) override;

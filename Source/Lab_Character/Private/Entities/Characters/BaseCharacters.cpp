@@ -24,13 +24,62 @@ void ABaseCharacters::CleanAnimStatesCache()
 
 }
 
+FString ABaseCharacters::GetCurrentStateName()
+{
+	TSet<UActorComponent*> components = this->GetComponents();
+
+	for (UActorComponent* component : components)
+	{
+		if (component->IsA(ULabCharacterState::StaticClass()))
+		{
+			ULabCharacterState* state = Cast<ULabCharacterState>(component);
+			if (state->GetIsStateActive())
+			{
+				//state->Init(this, true);
+				return state->EntityStateName.ToString();
+			}
+		}
+	}
+	
+	return FString();
+}
+
 // Called when the game starts or when spawned
 void ABaseCharacters::BeginPlay()
 {
 	Super::BeginPlay();
+	if (Cast<APlayerController>(GetController())) {
+		this->IsAIControlled = false;
+	}
+	else {
+		this->IsAIControlled = true;
 
-	UDefaultEntityState* initialState = this->GetComponentByClass<UDefaultEntityState>();
-	initialState->Init(this, true);
+		TArray<FName> actionNames;
+
+		this->Actions.GetKeys(actionNames);
+
+		for (FName currentActionName : actionNames)
+		{
+			UInputAction* currentAction = this->Actions[currentActionName];
+			UActionStatefullBinding* binding = NewObject<UActionStatefullBinding>();
+			
+			this->Bindings.Add(currentActionName, binding);
+		}
+	}
+
+	TSet<UActorComponent*> components = this->GetComponents();
+
+	for (UActorComponent* component : components) 
+	{
+		if (component->IsA(ULabCharacterState::StaticClass())) 
+		{
+			ULabCharacterState* state = Cast<ULabCharacterState>(component);
+			if (state->IsInitial) 
+			{
+				state->Init(this, true);
+			}
+		}
+	}
 
 }
 
@@ -61,8 +110,7 @@ void ABaseCharacters::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	{
 		UInputAction* currentAction = this->Actions[currentActionName];
 		UActionStatefullBinding* binding = NewObject<UActionStatefullBinding>();
-		//TSharedPtr<UActionStatefullBinding> bindingPointer = MakeShareable<UActionStatefullBinding>(binding);
-
+		
 		input->BindAction(currentAction, ETriggerEvent::Triggered, binding, &UActionStatefullBinding::OnInputTrigger);
 
 		this->Bindings.Add(currentActionName, binding);
