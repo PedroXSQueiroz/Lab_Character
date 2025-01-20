@@ -27,7 +27,15 @@ public:
 	UFUNCTION()
 	void Move(const FInputActionValue& moveAction);
 
+	virtual void ApplyMovement(FVector2D movement);
+
 	UFUNCTION()
 	void Look(const FInputActionValue& lookAction);
+
+	virtual void ApplyLook(FVector2D look);
+
+protected:
 	
+	void CalculateMovement(ABaseCharacters* charac, FVector2D movement, FVector& direction, float& intensity);
+
 };

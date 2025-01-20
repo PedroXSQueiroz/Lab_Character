@@ -25,19 +25,31 @@ void ULabCharacterWithLocomotionState::StatefullTick(AActor* actor, float DeltaT
 void ULabCharacterWithLocomotionState::Move(const FInputActionValue& moveAction)
 {
 	FVector2D movement = moveAction.Get<FVector2D>();
+	this->ApplyMovement(movement);
+}
 
-	UE_LOG(LogTemp, Log, TEXT("move input => x: %.2f, y: %.2f"), movement.X, movement.Y);
-
-	ABaseCharacters* charac = this->GetCharacter();
-
+void ULabCharacterWithLocomotionState::CalculateMovement(ABaseCharacters* charac, FVector2D movement, FVector& direction, float& intensity)
+{
 	FRotator currentHorizontalRotation = charac->GetControlRotation();
 	currentHorizontalRotation.Pitch = 0;
 	FVector forward = currentHorizontalRotation.Quaternion().GetForwardVector() * movement.Y;
 	FVector right = currentHorizontalRotation.Quaternion().GetRightVector() * movement.X;
 
-	float intensity = FVector(movement.X, movement.Y, 0).Length();
+	intensity = FVector(movement.X, movement.Y, 0).Length();
 
-	FVector movementDirection = forward + right;
+	direction = forward + right;
+}
+
+void ULabCharacterWithLocomotionState::ApplyMovement(FVector2D movement)
+{
+	UE_LOG(LogTemp, Log, TEXT("move input => x: %.2f, y: %.2f"), movement.X, movement.Y);
+
+	ABaseCharacters* charac = this->GetCharacter();
+
+	float intensity;
+	FVector movementDirection;
+
+	this->CalculateMovement(charac, movement, movementDirection, intensity);
 
 	if (intensity > this->MinVelocity)
 	{
@@ -52,14 +64,18 @@ void ULabCharacterWithLocomotionState::Move(const FInputActionValue& moveAction)
 			intensity
 		);
 	}
-
 }
+
 #pragma optimize("", on)
 
 void ULabCharacterWithLocomotionState::Look(const FInputActionValue& lookAction)
 {
 	FVector2D look = lookAction.Get<FVector2D>();
+	this->ApplyLook(look);
+}
 
+void ULabCharacterWithLocomotionState::ApplyLook(FVector2D look)
+{
 	this->GetCharacter()->AddControllerYawInput(look.X);
 	this->GetCharacter()->AddControllerPitchInput(look.Y);
 }

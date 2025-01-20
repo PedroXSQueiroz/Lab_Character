@@ -11,7 +11,13 @@ bool UDefaultEntityState::CharacterInit(ABaseCharacters* charac)
 {
 	if (Super::CharacterInit(charac)) 
 	{
-		charac->GetBinding(FName("aim"))->InputBindingTrigger.AddDynamic(this, &UDefaultEntityState::StartAim);
+		
+		UActionStatefullBinding* aimBinding = charac->GetBinding(FName("aim"));
+		if (aimBinding) 
+		{
+			aimBinding->InputBindingTrigger.AddDynamic(this, &UDefaultEntityState::StartAim);
+		}
+
 		charac->bUseControllerRotationYaw = false;
 		charac->GetCharacterMovement()->bOrientRotationToMovement = true;
 	
