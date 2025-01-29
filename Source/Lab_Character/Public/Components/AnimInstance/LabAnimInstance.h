@@ -22,6 +22,4 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure=true)
 	FRotator GetRelativeRotationFromIKState(FIKState ik);
 
-
-	
 };

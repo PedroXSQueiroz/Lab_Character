@@ -9,6 +9,7 @@
 
 #include <Data/WeightProvider.h>
 
+#pragma optimize("", off)
 void UBaseAnimInstance::InitIKParams()
 {
     for (UIKParams* param : this->IKParams) 
@@ -26,7 +27,6 @@ void UBaseAnimInstance::UpdateMovementState()
     this->MovementState.VelocityScale = this->MovementState.CurrentVelocity.Length() / this->MaxVelocity;
 }
 
-#pragma optimize("", off)
 TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
 {
     TArray<FIKState> states = TArray<FIKState>();
@@ -129,6 +129,191 @@ FLeanStateBlendAnim UBaseAnimInstance::GetLeanByBlendAnimByAxis(EAxis::Type axis
     }
     
     return FLeanStateBlendAnim(this->DefaultLeanAnim);
+}
+
+void UBaseAnimInstance::UpdateTurnInPlace(float deltaTime)
+{
+    this->GetTurnInPlaceByAxis(EAxis::Type::X, this->MovementState.DirectionDeviation, this->MovementState.VelocityScale);
+    this->GetTurnInPlaceByAxis(EAxis::Type::Y, this->MovementState.DirectionDeviation, this->MovementState.VelocityScale);
+    this->GetTurnInPlaceByAxis(EAxis::Type::Z, this->MovementState.DirectionDeviation, this->MovementState.VelocityScale);
+
+    if (this->IsTurning) 
+    {
+        this->TurningProgression += deltaTime;
+    }
+}
+
+FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity)
+{
+    
+    /*ACharacter* character = Cast<ACharacter>(this->GetOwningActor());
+
+    if (character) 
+    {
+        FVector actorForward = character->GetActorForwardVector();
+        FVector controlForward = character->GetControlRotation().Vector();
+        controlForward.Z = 0;
+
+        actorForward.Normalize();
+        DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (actorForward * 100),
+            FColor::Blue
+        );
+
+        controlForward.Normalize();
+        DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (controlForward * 100),
+            FColor::Red
+        );
+    }*/
+
+    
+    float deviationScalar = 0;
+
+    switch (axis)
+    {
+    case EAxis::Type::X: deviationScalar = deviation.Roll; break;
+    case EAxis::Type::Y: deviationScalar = deviation.Pitch; break;
+    case EAxis::Type::Z: deviationScalar = deviation.Yaw; break;
+    }
+
+    if (!this->IsTurning || this->CurrentTurningState.IsNone) 
+    {
+        UTurnInPlaceParams* selectedTurnParams = NULL;
+
+        for (UTurnInPlaceParams* turnParams : this->TurnInPlaceAnims) 
+        {
+            if (!turnParams) 
+            {
+                continue;
+            }
+            
+            if (turnParams->DeviationAxis == axis) 
+            {
+                UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
+
+                if ((   ( turnParams->MinDeviation > 0 && deviationScalar > turnParams->MinDeviation )
+                    ||  ( turnParams->MinDeviation < 0 && deviationScalar < turnParams->MinDeviation )
+                    )
+                    && 
+                    (
+                        ( 
+                            ( selectedTurnParams && turnParams->MinDeviation > selectedTurnParams->MinDeviation ) 
+                        ||  ( selectedTurnParams && turnParams->MinDeviation < 0 && turnParams->MinDeviation < selectedTurnParams->MinDeviation)
+                        ) 
+                    ||  (!selectedTurnParams)
+                    ) 
+                    && (velocity > turnParams->MinVelocity)
+                    && 
+                    (
+                        ( selectedTurnParams && turnParams->MinVelocity > selectedTurnParams->MinVelocity )
+                    ||  (!selectedTurnParams)
+                    )
+                ) 
+                {
+                    selectedTurnParams = turnParams;
+                }
+            }
+        }
+
+        if (selectedTurnParams) 
+        {
+            this->SetIsTurning(true);
+            this->TurningProgression = 0;
+            this->CurrentTurningState = FTurnInPlaceState(selectedTurnParams->TurnAnim);
+            this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
+            this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
+
+            return this->CurrentTurningState;
+        }
+        
+        //this->IsTurning = false;
+        FTurnInPlaceState dummy( this->CurrentTurningState.TurnAnim ? this->CurrentTurningState.TurnAnim : this->FallbackTurnInPlace);
+        dummy.IsNone = true;
+        this->CurrentTurningState = dummy;
+        return dummy;
+    }
+    else 
+    {
+        this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
+
+        FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
+
+        /*DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (targetTurnDirection.Vector() * 100),
+            FColor::Red,
+            true
+        );
+
+        DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (this->InitialTurningDirection.Vector() * 100),
+            FColor::Blue,
+            true
+        );
+
+        DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (this->GetOwningActor()->GetActorForwardVector() * 100),
+            FColor::Green,
+            true
+        );
+        */
+
+        //FRotator currentRotation = this->GetOwningActor()->GetActorRotation();
+
+        FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, targetTurnDirection, this->CurrentTurningState.Progression, false);
+
+        this->GetOwningActor()->SetActorRotation(currentTurnRot);
+
+    }
+    
+    UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
+
+    return this->CurrentTurningState;
+}
+float UBaseAnimInstance::GetCurrentTurningInPlaceWeight()
+{
+    if (!this->CurrentTurningState.IsNone) 
+    {
+        TArray<FFloatCurve> turnInPlaceWeightCurve = this->CurrentTurningState.TurnAnim->GetCurveData().FloatCurves.FilterByPredicate([](const FFloatCurve& curve) {
+            return curve.GetName().IsEqual(FName("TurnInPlaceWeitgh"));
+        });
+
+        if (turnInPlaceWeightCurve.Num() == 1)
+        {
+            return turnInPlaceWeightCurve[0].FloatCurve.Eval(this->TurningProgression);
+        }
+    }
+    
+    return 0.0f;
+}
+
+void UBaseAnimInstance::SetIsTurning(bool turning)
+{
+    this->IsTurning = turning;
+    ACharacter* charac = Cast<ACharacter>(this->GetOwningActor());
+    if (charac) 
+    {
+        if (!turning) 
+        {
+            FRotator forwardToTargetRot = charac->GetLastMovementInputVector().Rotation();
+            FRotator actorRot = charac->GetActorRotation();
+            actorRot.Yaw = forwardToTargetRot.Yaw;
+            //this->SetDesiredForwardRotation(forwardToTargetRot);
+            //charac->SetActorRotation(actorRot);
+        }
+        
+        charac->GetCharacterMovement()->bOrientRotationToMovement = !turning;
+    }
 }
 
 TArray<FLeanStateProcedural> UBaseAnimInstance::GetLeanProcStates()

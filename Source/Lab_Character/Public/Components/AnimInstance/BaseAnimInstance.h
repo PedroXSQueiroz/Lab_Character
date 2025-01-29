@@ -8,6 +8,7 @@
 #include <Data/IKParams.h>
 #include <Data/IKRootParams.h>
 #include <Data/LeanParam.h>
+#include <Data/TurnInPlaceAnim.h>
 
 #include "BaseAnimInstance.generated.h"
 
@@ -40,16 +41,88 @@ class LAB_CHARACTER_API UBaseAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 
+	//----------------------------------------------------------------------
+	//COMMON
+	//----------------------------------------------------------------------
+
+public:
+
+	void ClearCaches();
+	
+	//----------------------------------------------------------------------
+	//MOVEMENT
+	//----------------------------------------------------------------------
+
 public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|IKs")
 	float MaxVelocity;
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateMovementState();
+	
+	UPROPERTY(BlueprintReadOnly)
+	FMovementState MovementState;
+	
+	void SetDesiredForwardRotation(FRotator rotation);
+
+private:
+
+	FRotator GetCurrentDeviation();
+
+	UPROPERTY()
+	FRotator DesiredForwardRotation;
+	
+	//----------------------------------------------------------------------
+	//IK
+	//----------------------------------------------------------------------
+
+public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, Category = "Settings|IKs", meta = (AllowInherited = true))
 	TArray<UIKParams*> IKParams;
+	
+	UFUNCTION(BlueprintCallable)
+	void InitIKParams();
+
+	UFUNCTION(BlueprintCallable)
+	TArray<FIKState> UpdateCurrentIKsStates();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FIKState> GetCurrentIKStates();
+	
+	FIKState GetCurrentIKStateByName(FName name, bool& found);
+
+private:
+
+	UPROPERTY()
+	TMap<FName, FIKState> IKStatesCache;
+	
+	//----------------------------------------------------------------------
+	//IK ROOT
+	//----------------------------------------------------------------------
+
+public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, Category = "Settings|IKs", meta = (AllowInherited = true))
 	TArray<UIKRootParams*> IKRootParams;
+	
+	UFUNCTION(BlueprintCallable)
+	TArray<FIKRootState> UpdateCurrentIKRootStates();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<FIKRootState> GetCurrentRootIKStates();
+
+private:
+
+	UPROPERTY()
+	TMap<FName, FIKRootState> IKRootsStatesCache;
+	
+	//----------------------------------------------------------------------
+	//LEAN
+	//----------------------------------------------------------------------
+
+public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Lean")
 	UAnimSequence* DefaultLeanAnim;
@@ -60,51 +133,51 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, Category = "Settings|Lean", meta = (AllowInherited = true))
 	TArray<ULeanParamProcedural*> ProceduralLeans;
 
-	UFUNCTION(BlueprintCallable)
-	void InitIKParams();
-
-	UFUNCTION(BlueprintCallable)
-	void UpdateMovementState();
-
-	UFUNCTION(BlueprintCallable)
-	TArray<FIKState> UpdateCurrentIKsStates();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FIKState> GetCurrentIKStates();
-
-	FIKState GetCurrentIKStateByName(FName name, bool& found);
-
-	UFUNCTION(BlueprintCallable)
-	TArray<FIKRootState> UpdateCurrentIKRootStates();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<FIKRootState> GetCurrentRootIKStates();
-
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FLeanStateBlendAnim GetLeanByBlendAnimByAxis(EAxis::Type axis);
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FLeanStateProcedural> GetLeanProcStates();
+	
+	//----------------------------------------------------------------------
+	//TURN IN PLACE
+	//----------------------------------------------------------------------
 
+public:
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|TurnInPlace")
+	UAnimSequence* FallbackTurnInPlace;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, Category = "Settings|TurnInPlace", meta = (AllowInherited = true))
+	TArray<UTurnInPlaceParams*> TurnInPlaceAnims;
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateTurnInPlace(float deltaTime);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FTurnInPlaceState GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity);
+
+	UPROPERTY(BlueprintReadWrite)
+	bool IsTurning;
+	
 	UPROPERTY(BlueprintReadOnly)
-	FMovementState MovementState;
+	FTurnInPlaceState CurrentTurningState = FTurnInPlaceState();
 
-	void ClearCaches();
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetCurrentTurningInPlaceWeight();
 
-	void SetDesiredForwardRotation(FRotator rotation);
+	UFUNCTION(BlueprintCallable)
+	void SetIsTurning(bool turning);
 
 private:
 
-	FRotator GetCurrentDeviation();
+	UPROPERTY()
+	FRotator InitialTurningDirection;
 
 	UPROPERTY()
-	FRotator DesiredForwardRotation;
+	float TurningProgression = 0;
 
 	UPROPERTY()
-	TMap<FName, FIKState> IKStatesCache;
-
-	UPROPERTY()
-	TMap<FName, FIKRootState> IKRootsStatesCache;
-
+	float CurrentTurningInPlaceWeight = 0;
 
 };
