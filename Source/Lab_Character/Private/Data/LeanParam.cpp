@@ -20,6 +20,10 @@ float ULeanParam::GetIntensity(UAnimInstance* anim, EAxis::Type axis, FMovementS
 				case EAxis::Type::Z: return movementState.DirectionDeviation.Yaw/ 180;
 			}
 		break;
+
+		case ELeanType::VELOCITY :
+			return movementState.VelocityScale;
+			break;
 	}
 	
 	return 0;

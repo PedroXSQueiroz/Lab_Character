@@ -175,6 +175,9 @@ private:
 	FRotator InitialTurningDirection;
 
 	UPROPERTY()
+	FRotator TargetTurningDirection;
+
+	UPROPERTY()
 	float TurningProgression = 0;
 
 	UPROPERTY()

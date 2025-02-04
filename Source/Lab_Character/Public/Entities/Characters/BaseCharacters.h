@@ -28,12 +28,19 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetCurrentStateName();
 
+	void SetClampVelocityInput(float clamp);
+
+	float GetClampVelocityInput();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	UPROPERTY()
 	bool IsAIControlled;
+
+	UPROPERTY()
+	float ClampVelocityInput;
 	
 public:	
 	// Called every frame

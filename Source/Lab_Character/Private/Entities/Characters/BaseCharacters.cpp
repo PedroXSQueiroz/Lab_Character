@@ -44,6 +44,16 @@ FString ABaseCharacters::GetCurrentStateName()
 	return FString();
 }
 
+void ABaseCharacters::SetClampVelocityInput(float clamp)
+{
+	this->ClampVelocityInput = clamp;
+}
+
+float ABaseCharacters::GetClampVelocityInput()
+{
+	return this->ClampVelocityInput;
+}
+
 // Called when the game starts or when spawned
 void ABaseCharacters::BeginPlay()
 {

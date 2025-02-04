@@ -61,7 +61,11 @@ void ULabCharacterWithLocomotionState::ApplyMovement(FVector2D movement)
 				movementDirection.Y,
 				0
 			),
-			intensity
+			FMath::Clamp(
+				intensity,
+				0.0f,
+				1 - charac->GetClampVelocityInput()
+			)
 		);
 	}
 }
