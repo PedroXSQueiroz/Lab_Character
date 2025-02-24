@@ -56,6 +56,9 @@ public:
 
 	FIKState GetIKState(UBaseAnimInstance* anim);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float MaxNormalDeviation;
+
 };
 
 UCLASS(BlueprintType, Blueprintable, EditInlineNew, DefaultToInstanced)

@@ -27,7 +27,13 @@ public:
 	float MinVelocity;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float MaxVelocity { -1 };
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UAnimSequence* TurnAnim;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool TransitionOnFinish;
 
 };
 
@@ -40,9 +46,10 @@ struct LAB_CHARACTER_API FTurnInPlaceState : public FLabAninmState
 public:
 
 	FTurnInPlaceState():FLabAninmState() {}
-	FTurnInPlaceState(UAnimSequence* anim, float progression = 0):FLabAninmState(false)
+	FTurnInPlaceState(UAnimSequence* anim, float progression = 0, bool transit = false):FLabAninmState(false)
 	, TurnAnim(anim)
 	, Progression(progression)
+	, TransitionOnFinishTurn(transit)
 	{}
 
 	UPROPERTY(BlueprintReadOnly)
@@ -50,4 +57,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	float Progression;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool TransitionOnFinishTurn;
 };

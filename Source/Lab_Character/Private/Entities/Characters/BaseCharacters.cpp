@@ -4,6 +4,7 @@
 #include "Entities/Characters/BaseCharacters.h"
 #include "Components/States/DefaultEntityState.h"
 #include <Components/AnimInstance/BaseAnimInstance.h>
+#include <GameFramework/CharacterMovementComponent.h>
 
 #include <EnhancedInputComponent.h>
 #include <EnhancedInputSubsystems.h>
@@ -46,18 +47,23 @@ FString ABaseCharacters::GetCurrentStateName()
 
 void ABaseCharacters::SetClampVelocityInput(float clamp)
 {
-	this->ClampVelocityInput = clamp;
+	//this->ClampVelocityInput = clamp;
+
+	this->GetCharacterMovement()->MaxWalkSpeed = this->OriginalMaxWalkSpeed * ( 1 - clamp );
+	
 }
 
-float ABaseCharacters::GetClampVelocityInput()
-{
-	return this->ClampVelocityInput;
-}
+//float ABaseCharacters::GetClampVelocityInput()
+//{
+//	return this->ClampVelocityInput;
+//}
 
 // Called when the game starts or when spawned
 void ABaseCharacters::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	this->OriginalMaxWalkSpeed = this->GetCharacterMovement()->MaxWalkSpeed;
 	if (Cast<APlayerController>(GetController())) {
 		this->IsAIControlled = false;
 	}

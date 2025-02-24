@@ -157,7 +157,7 @@ public:
 
 	FLeanStateBlendAnim(
 		UAnimSequence* defaultAnim
-	) : FLabAninmState(false)
+	) : FLabAninmState(true)
 	,	AnimToBlend(defaultAnim)
 	,	Intensity(0)
 	{

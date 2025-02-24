@@ -64,6 +64,14 @@ FTransform UIKParamsByTrace::GetEffectorTransform(
 
     if (hitted) 
     {
+        float deviation = 1 - this->TraceDirection.Dot(hittedData.Normal);
+        
+        if (deviation > this->MaxNormalDeviation) 
+        {
+            return FTransform(FQuat::Identity, boneLocation);
+        }
+        
+        
         UE_LOG(LogTemp, Log, TEXT("[%s] original boneLocation: %s"), *this->ParamName.ToString(), *boneLocation.ToString());
 
         FVector newLocation             = hittedData.ImpactPoint;

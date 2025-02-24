@@ -7,7 +7,7 @@
 #include <Components/AnimInstance/BaseAnimInstance.h>
 #include "Data/LabAnimParams.h"
 
-
+#pragma optimize("", off)
 bool ULabCharacterState::Init(AActor* actor, bool first)
 {
 	ABaseCharacters* charac = Cast<ABaseCharacters>(actor);
@@ -23,6 +23,7 @@ bool ULabCharacterState::Init(AActor* actor, bool first)
 	this->UpdateAnimParams(leanParamsByBlendAnim);
 
 	this->UpdateAnimParams(labAnim->ProceduralLeans);
+	this->UpdateAnimParams(labAnim->TurnInPlaceAnims);
 
 	if (this->CharacterInit(charac))
 	{
@@ -70,3 +71,4 @@ void ULabCharacterState::UpdateAnimParams(TArray<AnimParam*> params)
 		param->Enabled = foundParam ? true : false;
 	}
 }
+#pragma optimize("", on)

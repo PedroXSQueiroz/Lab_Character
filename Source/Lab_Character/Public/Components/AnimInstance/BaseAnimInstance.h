@@ -44,6 +44,18 @@ class LAB_CHARACTER_API UBaseAnimInstance : public UAnimInstance
 	//----------------------------------------------------------------------
 	//COMMON
 	//----------------------------------------------------------------------
+public:
+
+	virtual void PostInitProperties() override;
+
+	template<typename Param>
+	Param* DuplicateParam(Param* param);
+
+	template<typename Param>
+	TArray<Param*> DuplicateParams(TArray<Param*> param);
+
+	template<typename Param, typename Key>	
+	TMap<Key, Param*> DuplicateParams(TMap<Key, Param*> param);
 
 public:
 
@@ -55,7 +67,7 @@ public:
 
 public:
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|IKs")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Movement")
 	float MaxVelocity;
 	
 	UFUNCTION(BlueprintCallable)
@@ -64,7 +76,11 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FMovementState MovementState;
 	
+	UFUNCTION(BlueprintCallable)
 	void SetDesiredForwardRotation(FRotator rotation);
+
+	UFUNCTION(BlueprintCallable)
+	void DesableDesiredForwardRotation();
 
 private:
 
@@ -72,7 +88,19 @@ private:
 
 	UPROPERTY()
 	FRotator DesiredForwardRotation;
+
+	UPROPERTY()
+	bool bUseDesiredForwardRotation;
+
+	//----------------------------------------------------------------------
+	//TRANSITION
+	//----------------------------------------------------------------------
 	
+public:
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Movement")
+	bool IsTransiting;
+
 	//----------------------------------------------------------------------
 	//IK
 	//----------------------------------------------------------------------
@@ -156,6 +184,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FTurnInPlaceState GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity);
+
+	void ApplyTurnInPlace();
 
 	UPROPERTY(BlueprintReadWrite)
 	bool IsTurning;

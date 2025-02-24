@@ -124,6 +124,11 @@ TArray<FIKRootState> UBaseAnimInstance::GetCurrentRootIKStates()
 
 FLeanStateBlendAnim UBaseAnimInstance::GetLeanByBlendAnimByAxis(EAxis::Type axis)
 {
+    if (this->IsTurning || this->bUseDesiredForwardRotation) 
+    {
+        return FLeanStateBlendAnim(this->DefaultLeanAnim);
+    }
+    
     if (this->LeanByBlendParams.Contains(axis) && this->LeanByBlendParams[axis] && this->LeanByBlendParams[axis]->Enabled)
     {
         return this->LeanByBlendParams[axis]->GetState(this, axis, this->MovementState);
@@ -166,7 +171,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                 continue;
             }
             
-            if (turnParams->DeviationAxis == axis) 
+            if (turnParams->DeviationAxis == axis && turnParams->Enabled) 
             {
                 UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
 
@@ -181,7 +186,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                         ) 
                     ||  (!selectedTurnParams)
                     ) 
-                    && (velocity > turnParams->MinVelocity)
+                    && (velocity >= turnParams->MinVelocity && ( velocity < turnParams->MaxVelocity || turnParams->MaxVelocity == -1 ) )
                     && 
                     (
                         ( selectedTurnParams && turnParams->MinVelocity > selectedTurnParams->MinVelocity )
@@ -198,11 +203,13 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
         {
             this->SetIsTurning(true);
             this->TurningProgression = 0;
-            this->CurrentTurningState = FTurnInPlaceState(selectedTurnParams->TurnAnim);
+            this->CurrentTurningState = FTurnInPlaceState(selectedTurnParams->TurnAnim, 0, selectedTurnParams->TransitionOnFinish);
             this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
             this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
             this->InitialTurningDirection.Normalize();
-            this->TargetTurningDirection = this->MovementState.CurrentVelocity.Rotation();
+            this->TargetTurningDirection = this->MovementState.CurrentVelocity.IsZero() ? 
+                                                this->DesiredForwardRotation 
+                                            :   this->MovementState.CurrentVelocity.Rotation();
             this->TargetTurningDirection.Normalize();
 
             return this->CurrentTurningState;
@@ -215,23 +222,34 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
     }
     else if(deviationScalar != 0)
     {
-        this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
-
-        FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
-        targetTurnDirection.Normalize();
-        
-        FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
-
-        this->GetOwningActor()->SetActorRotation(currentTurnRot);
-
-        ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
-        charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);
-
+        this->ApplyTurnInPlace();
     }
     
     UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
 
     return this->CurrentTurningState;
+}
+
+void UBaseAnimInstance::ApplyTurnInPlace()
+{
+    this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
+
+    FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
+    targetTurnDirection.Normalize();
+
+    FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
+
+    this->GetOwningActor()->SetActorRotation(currentTurnRot);
+
+    DrawDebugLine(
+        this->GetWorld(),
+        this->GetOwningActor()->GetActorLocation(),
+        this->GetOwningActor()->GetActorLocation() + (this->GetOwningActor()->GetActorForwardVector() * 100),
+        FColor::Red
+    );
+
+    ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
+    charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);
 }
 
 float UBaseAnimInstance::GetCurrentTurningInPlaceWeight()
@@ -264,6 +282,11 @@ void UBaseAnimInstance::SetIsTurning(bool turning)
         if (!turning) 
         {
             charac->SetClampVelocityInput(0);
+
+            if (this->CurrentTurningState.TransitionOnFinishTurn) 
+            {
+                this->IsTransiting = true;
+            }
         }
     }
 }
@@ -272,15 +295,30 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::GetLeanProcStates()
 {
     TArray<FLeanStateProcedural> states;
     
-    for (ULeanParamProcedural* param : this->ProceduralLeans) 
+    if (!this->IsTurning && !this->bUseDesiredForwardRotation) 
     {
-        if (param->Enabled) 
+        for (ULeanParamProcedural* param : this->ProceduralLeans) 
         {
-            states.Add(param->GetState(this, this->MovementState));
+            if (param->Enabled) 
+            {
+                states.Add(param->GetState(this, this->MovementState));
+            }
         }
     }
     
     return states;
+}
+
+void UBaseAnimInstance::PostInitProperties()
+{
+    Super::PostInitProperties();
+
+    this->IKParams          = this->DuplicateParams(this->IKParams);
+    this->IKRootParams      = this->DuplicateParams(this->IKRootParams);
+    this->LeanByBlendParams = this->DuplicateParams(this->LeanByBlendParams);
+    this->ProceduralLeans   = this->DuplicateParams(this->ProceduralLeans);
+    this->TurnInPlaceAnims  = this->DuplicateParams(this->TurnInPlaceAnims);
+
 }
 
 void UBaseAnimInstance::ClearCaches()
@@ -292,23 +330,67 @@ void UBaseAnimInstance::ClearCaches()
 void UBaseAnimInstance::SetDesiredForwardRotation(FRotator rotation)
 {
     this->DesiredForwardRotation = rotation;
+    this->bUseDesiredForwardRotation = true;
+}
+
+void UBaseAnimInstance::DesableDesiredForwardRotation()
+{
+    this->DesiredForwardRotation = FRotator::ZeroRotator;
+    this->bUseDesiredForwardRotation = false;
 }
 
 FRotator UBaseAnimInstance::GetCurrentDeviation()
 {
-    FRotator desiredDirection = this->DesiredForwardRotation.IsZero() ? 
-                                GetOwningActor()->GetActorRotation() : 
-                                this->DesiredForwardRotation;
-    FVector currentVelocity = this->GetOwningActor()->GetVelocity();
+    FRotator desiredDirection = this->bUseDesiredForwardRotation ?
+                                this->DesiredForwardRotation :
+                                GetOwningActor()->GetActorRotation();
+    FVector currentDirection = this->GetOwningActor()->GetVelocity();
 
-    if (currentVelocity.Length() == 0) 
+    if (currentDirection.Length() == 0) 
     {
-        return FRotator::ZeroRotator;
+        currentDirection = this->GetOwningActor()->GetActorForwardVector();
     }
 
-    currentVelocity.Normalize();
-    FRotator currentDirection = currentVelocity.Rotation();
+    currentDirection.Normalize();
+    FRotator currentDirectionRot = currentDirection.Rotation();
 
-    return UKismetMathLibrary::NormalizedDeltaRotator(currentDirection, desiredDirection);
+    return UKismetMathLibrary::NormalizedDeltaRotator(currentDirectionRot, desiredDirection);
 }
+
+template<typename Param>
+inline Param* UBaseAnimInstance::DuplicateParam(Param* param)
+{
+    return nullptr;
+}
+
+template<typename Param>
+inline TArray<Param*> UBaseAnimInstance::DuplicateParams(TArray<Param*> param)
+{
+    TArray<Param*> aux;
+    
+    for (int index = 0; index < param.Num(); index++)
+    {
+        aux.Add(DuplicateObject(param[index], this));
+    }
+
+    return aux;
+
+}
+
+template<typename Param, typename Key>
+inline TMap<Key, Param*> UBaseAnimInstance::DuplicateParams(TMap<Key, Param*> param)
+{
+    TMap<Key, Param*> aux;
+    
+    TArray<Key> keys;
+    param.GenerateKeyArray(keys);
+
+    for (Key key : keys)
+    {
+        aux.Add(key, DuplicateObject(param[key], this));
+    }
+
+    return aux;
+}
+
 #pragma optimize("", on)

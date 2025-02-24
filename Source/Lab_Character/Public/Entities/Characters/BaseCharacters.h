@@ -30,7 +30,7 @@ public:
 
 	void SetClampVelocityInput(float clamp);
 
-	float GetClampVelocityInput();
+	//float GetClampVelocityInput();
 
 protected:
 	// Called when the game starts or when spawned
@@ -39,8 +39,11 @@ protected:
 	UPROPERTY()
 	bool IsAIControlled;
 
+	/*UPROPERTY()
+	float ClampVelocityInput;*/
+
 	UPROPERTY()
-	float ClampVelocityInput;
+	float OriginalMaxWalkSpeed;
 	
 public:	
 	// Called every frame
