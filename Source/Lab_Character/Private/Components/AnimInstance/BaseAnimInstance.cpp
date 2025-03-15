@@ -3,6 +3,7 @@
 
 #include "Components/AnimInstance/BaseAnimInstance.h"
 
+#include "UObject/FastReferenceCollector.h"
 #include <Kismet/KismetMathLibrary.h>
 #include <GameFramework/CharacterMovementComponent.h>
 #include <GameFramework/Character.h>
@@ -128,8 +129,12 @@ FLeanStateBlendAnim UBaseAnimInstance::GetLeanByBlendAnimByAxis(EAxis::Type axis
     {
         return FLeanStateBlendAnim(this->DefaultLeanAnim);
     }
+
     
-    if (this->LeanByBlendParams.Contains(axis) && this->LeanByBlendParams[axis] && this->LeanByBlendParams[axis]->Enabled)
+    if (this->LeanByBlendParams.Contains(axis) 
+        && this->LeanByBlendParams[axis] 
+        && IsValid(this->LeanByBlendParams[axis])
+        && this->LeanByBlendParams[axis]->Enabled)
     {
         return this->LeanByBlendParams[axis]->GetState(this, axis, this->MovementState);
     }
@@ -166,7 +171,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
 
         for (UTurnInPlaceParams* turnParams : this->TurnInPlaceAnims) 
         {
-            if (!turnParams) 
+            if (!turnParams || !IsValid(turnParams))
             {
                 continue;
             }
@@ -198,11 +203,12 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                 }
             }
         }
-
+        
         if (selectedTurnParams) 
         {
             this->SetIsTurning(true);
             this->TurningProgression = 0;
+            this->MovementState.DirectionDeviation = FRotator::ZeroRotator;
             this->CurrentTurningState = FTurnInPlaceState(selectedTurnParams->TurnAnim, 0, selectedTurnParams->TransitionOnFinish);
             this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
             this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
@@ -313,12 +319,38 @@ void UBaseAnimInstance::PostInitProperties()
 {
     Super::PostInitProperties();
 
-    this->IKParams          = this->DuplicateParams(this->IKParams);
-    this->IKRootParams      = this->DuplicateParams(this->IKRootParams);
-    this->LeanByBlendParams = this->DuplicateParams(this->LeanByBlendParams);
-    this->ProceduralLeans   = this->DuplicateParams(this->ProceduralLeans);
-    this->TurnInPlaceAnims  = this->DuplicateParams(this->TurnInPlaceAnims);
+    TArray<UIKParams*>                                          iKParams            = this->DuplicateParams(this->IKParams);
+    TArray<UIKRootParams*>                                      iKRootParams        = this->DuplicateParams(this->IKRootParams);
+    TMap<TEnumAsByte<EAxis::Type>, ULeanParamBlendAnimByAxis*>  leanByBlendParams   = this->DuplicateParams(this->LeanByBlendParams);
+    TArray<ULeanParamProcedural*>                               proceduralLeans     = this->DuplicateParams(this->ProceduralLeans);
+    TArray<UTurnInPlaceParams*>                                 turnInPlaceAnims    = this->DuplicateParams(this->TurnInPlaceAnims);
 
+    this->CleanParams( this->IKParams );
+    this->CleanParams( this->IKRootParams );
+    this->CleanParams( this->LeanByBlendParams );
+    this->CleanParams( this->ProceduralLeans );
+    this->CleanParams( this->TurnInPlaceAnims );
+    
+    this->IKParams          = iKParams;
+    this->IKRootParams      = iKRootParams;
+    this->LeanByBlendParams = leanByBlendParams;
+    this->ProceduralLeans   = proceduralLeans;
+    this->TurnInPlaceAnims  = turnInPlaceAnims;
+
+}
+
+void UBaseAnimInstance::SetParamEnabled(FName paramName, bool enabled)
+{
+    this->SetParamEnabledOnList(this->IKParams, paramName, enabled );
+    this->SetParamEnabledOnList(this->IKRootParams, paramName, enabled );
+
+    TArray<ULeanParamBlendAnimByAxis*> leanParams;
+    this->LeanByBlendParams.GenerateValueArray(leanParams);
+
+    this->SetParamEnabledOnList(leanParams, paramName, enabled );
+    
+    this->SetParamEnabledOnList(this->ProceduralLeans, paramName, enabled );
+    this->SetParamEnabledOnList(this->TurnInPlaceAnims, paramName, enabled);
 }
 
 void UBaseAnimInstance::ClearCaches()
@@ -342,8 +374,10 @@ void UBaseAnimInstance::DesableDesiredForwardRotation()
 FRotator UBaseAnimInstance::GetCurrentDeviation()
 {
     FRotator desiredDirection = this->bUseDesiredForwardRotation ?
-                                this->DesiredForwardRotation :
-                                GetOwningActor()->GetActorRotation();
+                                    this->DesiredForwardRotation :
+                                    GetOwningActor()->GetActorRotation();
+                                    ;
+    
     FVector currentDirection = this->GetOwningActor()->GetVelocity();
 
     if (currentDirection.Length() == 0) 
@@ -354,7 +388,27 @@ FRotator UBaseAnimInstance::GetCurrentDeviation()
     currentDirection.Normalize();
     FRotator currentDirectionRot = currentDirection.Rotation();
 
-    return UKismetMathLibrary::NormalizedDeltaRotator(currentDirectionRot, desiredDirection);
+    return UKismetMathLibrary::RLerp(
+        this->MovementState.DirectionDeviation,
+        UKismetMathLibrary::NormalizedDeltaRotator(currentDirectionRot, desiredDirection),
+        this->DeviationLerp,
+        true
+    );
+}
+
+template<typename Param>
+bool UBaseAnimInstance::SetParamEnabledOnList(TArray<Param*> params, FName paramName, bool enabled)
+{
+    for (Param* param : params) 
+    {
+        if (param->ParamName == paramName) 
+        {
+            param->Enabled = enabled;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 template<typename Param>
@@ -391,6 +445,27 @@ inline TMap<Key, Param*> UBaseAnimInstance::DuplicateParams(TMap<Key, Param*> pa
     }
 
     return aux;
+}
+
+template<typename Param>
+void UBaseAnimInstance::CleanParams(TArray<Param*> param)
+{
+    for (Param* currentParam : param) 
+    {
+        currentParam->ConditionalBeginDestroy();
+    }
+}
+
+template<typename Param, typename Key>
+void UBaseAnimInstance::CleanParams(TMap<Key, Param*> param)
+{
+    TArray<Key> keys;
+    param.GenerateKeyArray(keys);
+
+    for (Key key : keys)
+    {
+        param[key]->ConditionalBeginDestroy();
+    }
 }
 
 #pragma optimize("", on)

@@ -48,14 +48,28 @@ public:
 
 	virtual void PostInitProperties() override;
 
+	void SetParamEnabled(FName paramName, bool enabled);
+
+protected:
+
+	template<typename Param>
+	bool SetParamEnabledOnList(TArray<Param*> params, FName paramName, bool enabled);
+
 	template<typename Param>
 	Param* DuplicateParam(Param* param);
 
 	template<typename Param>
 	TArray<Param*> DuplicateParams(TArray<Param*> param);
 
+
 	template<typename Param, typename Key>	
 	TMap<Key, Param*> DuplicateParams(TMap<Key, Param*> param);
+	
+	template<typename Param>
+	void CleanParams(TArray<Param*> param);
+
+	template<typename Param, typename Key>
+	void CleanParams(TMap<Key, Param*> param);
 
 public:
 
@@ -69,6 +83,9 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Movement")
 	float MaxVelocity;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Movement")
+	float DeviationLerp { 1 };
 	
 	UFUNCTION(BlueprintCallable)
 	void UpdateMovementState();
