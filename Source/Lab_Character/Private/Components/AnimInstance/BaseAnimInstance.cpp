@@ -178,8 +178,6 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
             
             if (turnParams->DeviationAxis == axis && turnParams->Enabled) 
             {
-                UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
-
                 if ((   ( turnParams->MinDeviation > 0 && deviationScalar > turnParams->MinDeviation )
                     ||  ( turnParams->MinDeviation < 0 && deviationScalar < turnParams->MinDeviation )
                     )
@@ -231,8 +229,6 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
         this->ApplyTurnInPlace();
     }
     
-    UE_LOG(LogTemp, Log, TEXT("current deviation: %.2f"), deviationScalar);
-
     return this->CurrentTurningState;
 }
 
@@ -325,11 +321,11 @@ void UBaseAnimInstance::PostInitProperties()
     TArray<ULeanParamProcedural*>                               proceduralLeans     = this->DuplicateParams(this->ProceduralLeans);
     TArray<UTurnInPlaceParams*>                                 turnInPlaceAnims    = this->DuplicateParams(this->TurnInPlaceAnims);
 
-    this->CleanParams( this->IKParams );
+    /*this->CleanParams( this->IKParams );
     this->CleanParams( this->IKRootParams );
     this->CleanParams( this->LeanByBlendParams );
     this->CleanParams( this->ProceduralLeans );
-    this->CleanParams( this->TurnInPlaceAnims );
+    this->CleanParams( this->TurnInPlaceAnims );*/
     
     this->IKParams          = iKParams;
     this->IKRootParams      = iKRootParams;

@@ -71,9 +71,6 @@ FTransform UIKParamsByTrace::GetEffectorTransform(
             return FTransform(FQuat::Identity, boneLocation);
         }
         
-        
-        UE_LOG(LogTemp, Log, TEXT("[%s] original boneLocation: %s"), *this->ParamName.ToString(), *boneLocation.ToString());
-
         FVector newLocation             = hittedData.ImpactPoint;
         FVector dealocation             = ((boneLocation - anim->GetOwningComponent()->GetComponentLocation()) * this->TraceDirection);
         FVector nonLockedDealocation    = newLocation + dealocation;
