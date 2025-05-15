@@ -206,6 +206,15 @@ public:
 
 	UPROPERTY(BlueprintReadWrite)
 	bool IsTurning;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsLockedByTurnInPlace;
+
+	UFUNCTION()
+	void UnlockTurnInPlace();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|TurnInPlace")
+	float LockMarginTime;
 	
 	UPROPERTY(BlueprintReadOnly)
 	FTurnInPlaceState CurrentTurningState = FTurnInPlaceState();
@@ -215,6 +224,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsTurning(bool turning);
+
+
 
 private:
 

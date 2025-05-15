@@ -165,7 +165,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
     case EAxis::Type::Z: deviationScalar = deviation.Yaw; break;
     }
 
-    if (!this->IsTurning || this->CurrentTurningState.IsNone) 
+    if ((!this->IsTurning || this->CurrentTurningState.IsNone))
     {
         UTurnInPlaceParams* selectedTurnParams = NULL;
 
@@ -215,6 +215,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                                                 this->DesiredForwardRotation 
                                             :   this->MovementState.CurrentVelocity.Rotation();
             this->TargetTurningDirection.Normalize();
+            this->IsLockedByTurnInPlace = true;
 
             return this->CurrentTurningState;
         }
@@ -254,6 +255,11 @@ void UBaseAnimInstance::ApplyTurnInPlace()
     charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);
 }
 
+void UBaseAnimInstance::UnlockTurnInPlace()
+{
+    this->IsLockedByTurnInPlace = false;
+}
+
 float UBaseAnimInstance::GetCurrentTurningInPlaceWeight()
 {
     if (!this->CurrentTurningState.IsNone) 
@@ -289,6 +295,18 @@ void UBaseAnimInstance::SetIsTurning(bool turning)
             {
                 this->IsTransiting = true;
             }
+
+            FTimerHandle unLockTurnInPlace;
+
+            GetWorld()
+            ->GetTimerManager()
+            .SetTimer(
+                unLockTurnInPlace,
+                this,
+                &UBaseAnimInstance::UnlockTurnInPlace,
+                this->LockMarginTime,
+                false
+            );
         }
     }
 }

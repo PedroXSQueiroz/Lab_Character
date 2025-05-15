@@ -15,9 +15,9 @@ float ULeanParam::GetIntensity(UAnimInstance* anim, EAxis::Type axis, FMovementS
 		case ELeanType::DIRECTION :
 			switch (axis) 
 			{
-				case EAxis::Type::X: return movementState.DirectionDeviation.Roll / 180;
-				case EAxis::Type::Y: return movementState.DirectionDeviation.Pitch / 180;
-				case EAxis::Type::Z: return movementState.DirectionDeviation.Yaw/ 180;
+				case EAxis::Type::X: return ( movementState.DirectionDeviation.Roll / 180 ) * movementState.VelocityScale;
+				case EAxis::Type::Y: return ( movementState.DirectionDeviation.Pitch / 180 ) * movementState.VelocityScale;
+				case EAxis::Type::Z: return ( movementState.DirectionDeviation.Yaw/ 180 ) * movementState.VelocityScale;
 			}
 		break;
 
