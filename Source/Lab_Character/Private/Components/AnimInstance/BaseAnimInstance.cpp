@@ -36,7 +36,7 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
     {
         for (UIKParams* currentParams : this->IKParams)
         {
-            bool cached = !this->IKStatesCache.Contains(currentParams->Name);
+            bool cached = currentParams && !this->IKStatesCache.Contains(currentParams->Name);
             
             if (currentParams && currentParams->Enabled)
             {
@@ -101,7 +101,7 @@ TArray<FIKRootState> UBaseAnimInstance::UpdateCurrentIKRootStates()
 
     for (UIKRootParams* params : this->IKRootParams) 
     {
-        if (params->Enabled) 
+        if (params && params->Enabled) 
         {
             FIKRootState currentState = params->GetCurrentRootTransform(this);
 
@@ -319,7 +319,7 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::GetLeanProcStates()
     {
         for (ULeanParamProcedural* param : this->ProceduralLeans) 
         {
-            if (param->Enabled) 
+            if (param && param->Enabled) 
             {
                 states.Add(param->GetState(this, this->MovementState));
             }
@@ -415,7 +415,7 @@ bool UBaseAnimInstance::SetParamEnabledOnList(TArray<Param*> params, FName param
 {
     for (Param* param : params) 
     {
-        if (param->ParamName == paramName) 
+        if (param && param->ParamName == paramName) 
         {
             param->Enabled = enabled;
             return true;

@@ -67,8 +67,11 @@ void ULabCharacterState::UpdateAnimParams(TArray<AnimParam*> params)
 {
 	for (ULabAnimParams* param : params) 
 	{
-		bool foundParam = this->ActiveAnimParams.Contains(param->ParamName);
-		param->Enabled = foundParam ? true : false;
+		if (param) 
+		{
+			bool foundParam = this->ActiveAnimParams.Contains(param->ParamName);
+			param->Enabled = foundParam ? true : false;
+		}
 	}
 }
 #pragma optimize("", on)
