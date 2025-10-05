@@ -2,7 +2,8 @@
 
 
 #include "Entities/Characters/BaseCharacters.h"
-#include "Components/States/DefaultEntityState.h"
+
+#include <Components/States/DefaultEntityState.h>
 #include <Components/AnimInstance/BaseAnimInstance.h>
 #include <GameFramework/CharacterMovementComponent.h>
 
@@ -25,7 +26,7 @@ void ABaseCharacters::CleanAnimStatesCache()
 
 }
 
-FString ABaseCharacters::GetCurrentStateName()
+UEntityState* ABaseCharacters::GetCurrentEntityState()
 {
 	TSet<UActorComponent*> components = this->GetComponents();
 
@@ -36,10 +37,21 @@ FString ABaseCharacters::GetCurrentStateName()
 			ULabCharacterState* state = Cast<ULabCharacterState>(component);
 			if (state->GetIsStateActive())
 			{
-				//state->Init(this, true);
-				return state->EntityStateName.ToString();
+				return state;
 			}
 		}
+	}
+	
+	return NULL;
+}
+
+FString ABaseCharacters::GetCurrentStateName()
+{
+	UEntityState* currentState = this->GetCurrentEntityState();
+
+	if (currentState) 
+	{
+		return currentState->EntityStateName.ToString();
 	}
 	
 	return FString();

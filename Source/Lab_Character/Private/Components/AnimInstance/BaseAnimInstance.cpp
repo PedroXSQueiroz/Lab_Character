@@ -178,8 +178,8 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
             
             if (turnParams->DeviationAxis == axis && turnParams->Enabled) 
             {
-                if ((   ( turnParams->MinDeviation > 0 && deviationScalar > turnParams->MinDeviation )
-                    ||  ( turnParams->MinDeviation < 0 && deviationScalar < turnParams->MinDeviation )
+                if ((   ( turnParams->MinDeviation >= 0 && deviationScalar > turnParams->MinDeviation )
+                    ||  ( turnParams->MinDeviation <= 0 && deviationScalar < turnParams->MinDeviation )
                     )
                     && 
                     (
@@ -225,34 +225,51 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
         this->CurrentTurningState = dummy;
         return dummy;
     }
-    else if(deviationScalar != 0)
+    /*else if(deviationScalar != 0)
     {
         this->ApplyTurnInPlace();
-    }
+    }*/
     
     return this->CurrentTurningState;
 }
 
 void UBaseAnimInstance::ApplyTurnInPlace()
 {
-    this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
+    FRotator deviation = this->MovementState.DirectionDeviation;
+    
+    float deviationScalar = FMath::Max3(deviation.Roll, deviation.Pitch, deviation.Yaw);
 
-    FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
-    targetTurnDirection.Normalize();
+    if (!FMath::IsNearlyZero( deviationScalar ) && (this->IsTurning && !this->CurrentTurningState.IsNone))
+    { 
+        //FMath::Max3(deviation.Roll, deviation.Pitch, deviation.Yaw);
 
-    FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
+        /*switch (axis)
+        {
+        case EAxis::Type::X: deviationScalar = deviation.Roll; break;
+        case EAxis::Type::Y: deviationScalar = deviation.Pitch; break;
+        case EAxis::Type::Z: deviationScalar = deviation.Yaw; break;
+        }
+        */
+        this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
 
-    this->GetOwningActor()->SetActorRotation(currentTurnRot);
+        FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
+        targetTurnDirection.Normalize();
 
-    DrawDebugLine(
-        this->GetWorld(),
-        this->GetOwningActor()->GetActorLocation(),
-        this->GetOwningActor()->GetActorLocation() + (this->GetOwningActor()->GetActorForwardVector() * 100),
-        FColor::Red
-    );
+        FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
 
-    ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
-    charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);
+        this->GetOwningActor()->SetActorRotation(currentTurnRot);
+
+        /*DrawDebugLine(
+            this->GetWorld(),
+            this->GetOwningActor()->GetActorLocation(),
+            this->GetOwningActor()->GetActorLocation() + (this->GetOwningActor()->GetActorForwardVector() * 100),
+            FColor::Red
+        );*/
+
+        /*ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
+        charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);*/
+    }
+
 }
 
 void UBaseAnimInstance::UnlockTurnInPlace()
@@ -315,13 +332,19 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::GetLeanProcStates()
 {
     TArray<FLeanStateProcedural> states;
     
-    if (!this->IsTurning && !this->bUseDesiredForwardRotation) 
+    for (ULeanParamProcedural* param : this->ProceduralLeans) 
     {
-        for (ULeanParamProcedural* param : this->ProceduralLeans) 
+        if (param) 
         {
-            if (param && param->Enabled) 
+            param->CurrentWeight = !this->IsTurning ?
+                FMath::Lerp(param->CurrentWeight, 1, param->WeightLerp) :
+                FMath::Lerp(param->CurrentWeight, 0, param->WeightLerp);
+
+            UE_LOG(LogTemp, Log, TEXT("Weight for param: %s => %.2f"), *param->ParamName.ToString(), param->CurrentWeight);
+            
+            if (param->Enabled) 
             {
-                states.Add(param->GetState(this, this->MovementState));
+                states.Add(param->GetState(this, this->MovementState, param->CurrentWeight));
             }
         }
     }

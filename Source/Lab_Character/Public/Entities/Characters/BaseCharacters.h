@@ -11,6 +11,8 @@
 
 #include "BaseCharacters.generated.h"
 
+class UEntityState;
+
 UCLASS()
 class LAB_CHARACTER_API ABaseCharacters : public AStatefullCharacter
 {
@@ -24,6 +26,8 @@ public:
 	UInputMappingContext* DefaultMappingContext;
 
 	void CleanAnimStatesCache();
+
+	UEntityState* GetCurrentEntityState();
 
 	UFUNCTION(BlueprintCallable)
 	FString GetCurrentStateName();

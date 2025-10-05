@@ -29,9 +29,16 @@ FIKRootState UIKRootParams::GetCurrentRootTransform(UBaseAnimInstance* anim)
 			continue;
 		}
 		
-		UIKParams* currentIKParamInstance = anim->IKParams.FilterByPredicate([currentIKName](const UIKParams* params) {
-			return params->Name == currentIKName;
-		})[0];
+		TArray<UIKParams*> rootParamsFound = anim->IKParams.FilterByPredicate([currentIKName](const UIKParams* params) {
+			return params && params->Name == currentIKName;
+		});
+
+		if (rootParamsFound.Num() != 1) 
+		{
+			return FIKRootState();
+		}
+
+		UIKParams* currentIKParamInstance = rootParamsFound[0];
 		
 		/*UIKParamsByTrace* currentIKParam = Cast<UIKParamsByTrace>(currentIKParamInstance);
 		direction += currentIKParam->TraceDirection;*/

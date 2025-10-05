@@ -15,7 +15,7 @@ bool UAimingState::CharacterInit(ABaseCharacters* charac)
 	
 	if (Super::CharacterInit(charac)) 
 	{
-		charac->GetBinding(FName("aim"))->InputBindingTrigger.AddDynamic(this, &UAimingState::StopAiming);
+		//charac->GetBinding(FName("aim"))->InputBindingTrigger.AddDynamic(this, &UAimingState::StopAiming);
 		charac->bUseControllerRotationYaw = false;
 		charac->GetCharacterMovement()->bOrientRotationToMovement = false;
 

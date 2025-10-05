@@ -115,6 +115,7 @@ private:
 	
 public:
 
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|Movement")
 	bool IsTransiting;
 
@@ -202,6 +203,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FTurnInPlaceState GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity);
 
+	UFUNCTION(BlueprintCallable)
 	void ApplyTurnInPlace();
 
 	UPROPERTY(BlueprintReadWrite)

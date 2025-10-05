@@ -16,7 +16,8 @@ enum ELeanType : uint8
 {
 	VELOCITY,
 	ACCELERATION,
-	DIRECTION
+	DIRECTION,
+	DIRECTION_STOPPED
 };
 
 /**
@@ -71,7 +72,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
 	TEnumAsByte<EAxis::Type> TargetAxis;
 
-	FLeanStateProcedural GetState(UAnimInstance* anim, FMovementState movementState);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float WeightLerp{ 1 };
+
+	//TODO: THIS SHOULD BE HERE?
+	UPROPERTY()
+	float CurrentWeight;
+
+	FLeanStateProcedural GetState(UAnimInstance* anim, FMovementState movementState, float weight);
 
 	virtual TArray<FLeanBone> CalculateLean(float intensity, EAxis::Type axisReference) PURE_VIRTUAL(TEXT("NOT IMPLEMENTED YET"), return TArray<FLeanBone>(););
 };
@@ -89,6 +97,28 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
 	FName Effector;
+
+	virtual TArray<FLeanBone> CalculateLean(float intensity, EAxis::Type axisTarget) override;
+};
+
+UCLASS(BlueprintType, Blueprintable, EditInlineNew, DefaultToInstanced)
+class LAB_CHARACTER_API ULeanChainParamDealocation : public ULeanParamProcedural
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float MaxDealoaction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float Offset{ 90 };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	FRuntimeFloatCurve DealocationIntensityOnChain;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	TArray<FName> Effectors;
 
 	virtual TArray<FLeanBone> CalculateLean(float intensity, EAxis::Type axisTarget) override;
 };
@@ -132,13 +162,17 @@ public:
 		TransformPerBone(TArray<FLeanBone>())
 	{}
 
-	FLeanStateProcedural(TArray<FLeanBone> transforms)
+	FLeanStateProcedural(TArray<FLeanBone> transforms, float weight)
 	:	FLabAninmState(false),
-		TransformPerBone(transforms)
+		TransformPerBone(transforms),
+		Weight(weight)
 	{}
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FLeanBone> TransformPerBone;
+
+	UPROPERTY(BlueprintReadOnly)
+	float Weight;
 };
 
 USTRUCT(BlueprintType, Blueprintable)
