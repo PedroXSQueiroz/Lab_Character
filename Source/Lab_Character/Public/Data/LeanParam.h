@@ -75,6 +75,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
 	float WeightLerp{ 1 };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float Lerp{ 1 };
+
 	//TODO: THIS SHOULD BE HERE?
 	UPROPERTY()
 	float CurrentWeight;

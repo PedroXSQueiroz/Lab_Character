@@ -184,6 +184,14 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FLeanStateProcedural> GetLeanProcStates();
+
+	UFUNCTION(BlueprintCallable)
+	TArray<FLeanStateProcedural> UpdateLeanProcStates();
+
+private:
+
+	UPROPERTY()
+	TMap<FName, FLeanStateProcedural> ProcLeanStatesCache;
 	
 	//----------------------------------------------------------------------
 	//TURN IN PLACE

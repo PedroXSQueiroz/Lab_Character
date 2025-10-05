@@ -36,7 +36,7 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
     {
         for (UIKParams* currentParams : this->IKParams)
         {
-            bool cached = currentParams && !this->IKStatesCache.Contains(currentParams->Name);
+            bool uncached = currentParams && !this->IKStatesCache.Contains(currentParams->Name);
             
             if (currentParams && currentParams->Enabled)
             {
@@ -47,7 +47,7 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
 
                     states.Add(currentIKState);
 
-                    if (cached) 
+                    if (uncached) 
                     {
                         this->IKStatesCache.Add(currentParams->Name, currentIKState);
                     }
@@ -59,7 +59,7 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
             }
             else 
             {
-                if (cached) 
+                if (uncached) 
                 {
                     this->IKStatesCache.Remove(currentParams->Name);
                 }
@@ -331,24 +331,64 @@ void UBaseAnimInstance::SetIsTurning(bool turning)
 TArray<FLeanStateProcedural> UBaseAnimInstance::GetLeanProcStates()
 {
     TArray<FLeanStateProcedural> states;
+   
+    this->ProcLeanStatesCache.GenerateValueArray(states);
     
-    for (ULeanParamProcedural* param : this->ProceduralLeans) 
+    return states;
+}
+
+TArray<FLeanStateProcedural> UBaseAnimInstance::UpdateLeanProcStates()
+{
+    TArray<FLeanStateProcedural> states;
+
+    for (ULeanParamProcedural* param : this->ProceduralLeans)
     {
-        if (param) 
+        if (param)
         {
             param->CurrentWeight = !this->IsTurning ?
                 FMath::Lerp(param->CurrentWeight, 1, param->WeightLerp) :
                 FMath::Lerp(param->CurrentWeight, 0, param->WeightLerp);
 
             UE_LOG(LogTemp, Log, TEXT("Weight for param: %s => %.2f"), *param->ParamName.ToString(), param->CurrentWeight);
-            
-            if (param->Enabled) 
+
+            if (param->Enabled)
             {
-                states.Add(param->GetState(this, this->MovementState, param->CurrentWeight));
+                FLeanStateProcedural currentState = param->GetState(this, this->MovementState, param->CurrentWeight);
+
+                if (this->ProcLeanStatesCache.Contains(param->ParamName))
+                {
+                    //INTERPOLE PREVIOUS TRANSFORMS WITH THE NEW ONE
+                    FLeanStateProcedural previousState = this->ProcLeanStatesCache[param->ParamName];
+
+                    for (int boneIndex = 0; boneIndex < previousState.TransformPerBone.Num(); boneIndex++)
+                    {
+                        currentState.TransformPerBone[boneIndex].Transform.Blend(
+                            previousState.TransformPerBone[boneIndex].Transform,
+                            currentState.TransformPerBone[boneIndex].Transform,
+                            param->Lerp
+                        );
+                        
+                        /*currentState.TransformPerBone[boneIndex].Transform = FMath::Lerp(
+                                previousState.TransformPerBone[boneIndex].Transform
+                            ,   currentState.TransformPerBone[boneIndex].Transform
+                            ,   param->Lerp
+                        );*/
+                    }
+                    
+                    //STORE NEW STATE IN CACHE
+                    this->ProcLeanStatesCache[param->ParamName] = currentState;
+                }
+                else
+                {
+                    this->ProcLeanStatesCache.Add(param->ParamName, currentState);
+                }
+
+                states.Add(currentState);
+
             }
         }
     }
-    
+
     return states;
 }
 
@@ -361,12 +401,6 @@ void UBaseAnimInstance::PostInitProperties()
     TMap<TEnumAsByte<EAxis::Type>, ULeanParamBlendAnimByAxis*>  leanByBlendParams   = this->DuplicateParams(this->LeanByBlendParams);
     TArray<ULeanParamProcedural*>                               proceduralLeans     = this->DuplicateParams(this->ProceduralLeans);
     TArray<UTurnInPlaceParams*>                                 turnInPlaceAnims    = this->DuplicateParams(this->TurnInPlaceAnims);
-
-    /*this->CleanParams( this->IKParams );
-    this->CleanParams( this->IKRootParams );
-    this->CleanParams( this->LeanByBlendParams );
-    this->CleanParams( this->ProceduralLeans );
-    this->CleanParams( this->TurnInPlaceAnims );*/
     
     this->IKParams          = iKParams;
     this->IKRootParams      = iKRootParams;
@@ -394,6 +428,7 @@ void UBaseAnimInstance::ClearCaches()
 {
     this->IKRootsStatesCache.Empty();
     this->IKStatesCache.Empty();
+    this->ProcLeanStatesCache.Empty();
 }
 
 void UBaseAnimInstance::SetDesiredForwardRotation(FRotator rotation)
