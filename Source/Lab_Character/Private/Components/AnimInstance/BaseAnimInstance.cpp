@@ -207,7 +207,12 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
             this->SetIsTurning(true);
             this->TurningProgression = 0;
             this->MovementState.DirectionDeviation = FRotator::ZeroRotator;
-            this->CurrentTurningState = FTurnInPlaceState(selectedTurnParams->TurnAnim, 0, selectedTurnParams->TransitionOnFinish);
+            this->CurrentTurningState = FTurnInPlaceState(
+                selectedTurnParams->TurnAnim, 
+                0, 
+                selectedTurnParams->TransitionOnFinish, 
+                selectedTurnParams->PlayRate
+            );
             this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
             this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
             this->InitialTurningDirection.Normalize();
@@ -345,16 +350,20 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::UpdateLeanProcStates()
     {
         if (param)
         {
-            param->CurrentWeight = !this->IsTurning ?
+            param->CurrentWeight = !this->IsTurning && param->Enabled ?
                 FMath::Lerp(param->CurrentWeight, 1, param->WeightLerp) :
                 FMath::Lerp(param->CurrentWeight, 0, param->WeightLerp);
 
             UE_LOG(LogTemp, Log, TEXT("Weight for param: %s => %.2f"), *param->ParamName.ToString(), param->CurrentWeight);
 
-            if (param->Enabled)
-            {
+            //TODO: THE CONDITIONAL COMMENTED BELOW WAS MADE FOR NOT CALCULATE WHE IS NOT NECCESSARY
+            // BUT THIS APPROACH DESABLE A GRACFULL FALLOF OF THE LEAN
+            // SHOULD BE POSSIBLE ENBALE THIS FALLOF AND YET NOT CALCULATE THIS VALUES WHE IS NOT NECCESSARY
+            
+            //if(param->Enabled)
+            //{
                 FLeanStateProcedural currentState = param->GetState(this, this->MovementState, param->CurrentWeight);
-
+                
                 if (this->ProcLeanStatesCache.Contains(param->ParamName))
                 {
                     //INTERPOLE PREVIOUS TRANSFORMS WITH THE NEW ONE
@@ -367,14 +376,14 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::UpdateLeanProcStates()
                             currentState.TransformPerBone[boneIndex].Transform,
                             param->Lerp
                         );
-                        
+
                         /*currentState.TransformPerBone[boneIndex].Transform = FMath::Lerp(
                                 previousState.TransformPerBone[boneIndex].Transform
                             ,   currentState.TransformPerBone[boneIndex].Transform
                             ,   param->Lerp
                         );*/
                     }
-                    
+
                     //STORE NEW STATE IN CACHE
                     this->ProcLeanStatesCache[param->ParamName] = currentState;
                 }
@@ -384,8 +393,11 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::UpdateLeanProcStates()
                 }
 
                 states.Add(currentState);
-
-            }
+            } 
+            //else if (this->ProcLeanStatesCache.Contains(param->ParamName))
+            //{
+            //    this->ProcLeanStatesCache.Remove(param->ParamName);
+            //}
         }
     }
 

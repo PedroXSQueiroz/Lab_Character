@@ -33,6 +33,9 @@ public:
 	UAnimSequence* TurnAnim;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float PlayRate { 1 };
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool TransitionOnFinish;
 
 };
@@ -46,10 +49,11 @@ struct LAB_CHARACTER_API FTurnInPlaceState : public FLabAninmState
 public:
 
 	FTurnInPlaceState():FLabAninmState() {}
-	FTurnInPlaceState(UAnimSequence* anim, float progression = 0, bool transit = false):FLabAninmState(false)
+	FTurnInPlaceState(UAnimSequence* anim, float progression = 0, bool transit = false, float playRate = 1):FLabAninmState(false)
 	, TurnAnim(anim)
 	, Progression(progression)
 	, TransitionOnFinishTurn(transit)
+	, PlayRate(playRate)
 	{}
 
 	UPROPERTY(BlueprintReadOnly)
@@ -60,4 +64,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool TransitionOnFinishTurn;
+
+	UPROPERTY(BlueprintReadOnly)
+	float PlayRate;
 };
