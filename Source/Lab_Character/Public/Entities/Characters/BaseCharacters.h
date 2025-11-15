@@ -34,7 +34,7 @@ public:
 
 	void SetClampVelocityInput(float clamp);
 
-	//float GetClampVelocityInput();
+	float GetClampVelocityInput() { return this->ClampVelocityInput; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -43,8 +43,8 @@ protected:
 	UPROPERTY()
 	bool IsAIControlled;
 
-	/*UPROPERTY()
-	float ClampVelocityInput;*/
+	UPROPERTY()
+	float ClampVelocityInput;
 
 	UPROPERTY()
 	float OriginalMaxWalkSpeed;

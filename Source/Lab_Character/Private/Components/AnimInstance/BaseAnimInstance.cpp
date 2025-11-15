@@ -142,6 +142,30 @@ FLeanStateBlendAnim UBaseAnimInstance::GetLeanByBlendAnimByAxis(EAxis::Type axis
     return FLeanStateBlendAnim(this->DefaultLeanAnim);
 }
 
+void UBaseAnimInstance::UpdateTurnInPlaceVelocityBuffer(float DeltaTime)
+{
+    this->LastVelocityBufferTimeSpent += DeltaTime;
+
+    if (this->LastVelocityBufferTimeSpent > this->VelocityBufferTimeInterval) 
+    {
+        this->VelocityBuffer.Add(this->MovementState.CurrentVelocity.Length());
+    }
+
+    if(this->VelocityBuffer.Num() > this->VelocityBufferMax)
+    {
+        this->VelocityBuffer.RemoveAt(0);
+    }
+}
+
+float UBaseAnimInstance::GetAvarageVelocity()
+{
+    float sum = 0;
+
+    for (float velocityEntry : this->VelocityBuffer) { sum += velocityEntry; }
+    
+    return sum / this->VelocityBuffer.Num();
+}
+
 void UBaseAnimInstance::UpdateTurnInPlace(float deltaTime)
 {
     this->GetTurnInPlaceByAxis(EAxis::Type::X, this->MovementState.DirectionDeviation, this->MovementState.VelocityScale);
@@ -157,6 +181,7 @@ void UBaseAnimInstance::UpdateTurnInPlace(float deltaTime)
 FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity)
 {
     float deviationScalar = 0;
+    velocity = this->GetAvarageVelocity();
 
     switch (axis)
     {
@@ -211,7 +236,9 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                 selectedTurnParams->TurnAnim, 
                 0, 
                 selectedTurnParams->TransitionOnFinish, 
-                selectedTurnParams->PlayRate
+                selectedTurnParams->DeviationAxis,
+                selectedTurnParams->PlayRate,
+                deviationScalar > 0
             );
             this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
             this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
@@ -242,37 +269,55 @@ void UBaseAnimInstance::ApplyTurnInPlace()
 {
     FRotator deviation = this->MovementState.DirectionDeviation;
     
-    float deviationScalar = FMath::Max3(deviation.Roll, deviation.Pitch, deviation.Yaw);
+    float deviationScalar = FMath::Max3(
+        FMath::Abs(deviation.Roll), 
+        FMath::Abs(deviation.Pitch),
+        FMath::Abs(deviation.Yaw)
+    );
 
     if (!FMath::IsNearlyZero( deviationScalar ) && (this->IsTurning && !this->CurrentTurningState.IsNone))
     { 
-        //FMath::Max3(deviation.Roll, deviation.Pitch, deviation.Yaw);
-
-        /*switch (axis)
-        {
-        case EAxis::Type::X: deviationScalar = deviation.Roll; break;
-        case EAxis::Type::Y: deviationScalar = deviation.Pitch; break;
-        case EAxis::Type::Z: deviationScalar = deviation.Yaw; break;
-        }
-        */
         this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
 
         FRotator targetTurnDirection = this->MovementState.CurrentVelocity.Rotation();
         targetTurnDirection.Normalize();
 
+        FRotator currentTargetDirection = this->MovementState.CurrentVelocity.IsZero() ?
+            this->DesiredForwardRotation
+            : this->MovementState.CurrentVelocity.Rotation();
+
+        /*FRotator diffToTarget = UKismetMathLibrary::NormalizedDeltaRotator(this->InitialTurningDirection, currentTargetDirection);
+
+        FRotator currentTurnRot = this->InitialTurningDirection;
+        switch (this->CurrentTurningState.Axis)
+        {
+        case EAxis::Type::X : {
+            float diff = diffToTarget.Roll;
+            currentTurnRot.Roll += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : -1);
+        }
+            break;
+        case EAxis::Type::Y: {
+            float diff = diffToTarget.Pitch;
+            currentTurnRot.Pitch += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : -1);
+        }
+            break;
+        case EAxis::Type::Z: {
+            float diff = diffToTarget.Yaw;
+            currentTurnRot.Yaw += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : 1);
+        }
+            break;
+        }*/
+
         FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
 
         this->GetOwningActor()->SetActorRotation(currentTurnRot);
 
-        /*DrawDebugLine(
-            this->GetWorld(),
-            this->GetOwningActor()->GetActorLocation(),
-            this->GetOwningActor()->GetActorLocation() + (this->GetOwningActor()->GetActorForwardVector() * 100),
-            FColor::Red
-        );*/
+        float clampVelocity = 0;
+        this->GetCurveValue(FName("TurnClampVelocity"), clampVelocity);
 
-        /*ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
-        charac->SetClampVelocityInput(1 - this->CurrentTurningState.Progression);*/
+        ABaseCharacters* charac = Cast<ABaseCharacters>(this->GetOwningActor());
+        charac->SetClampVelocityInput(clampVelocity);
+
     }
 
 }
@@ -398,7 +443,6 @@ TArray<FLeanStateProcedural> UBaseAnimInstance::UpdateLeanProcStates()
             //{
             //    this->ProcLeanStatesCache.Remove(param->ParamName);
             //}
-        }
     }
 
     return states;

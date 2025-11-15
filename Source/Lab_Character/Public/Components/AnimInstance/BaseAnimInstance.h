@@ -206,6 +206,11 @@ public:
 	TArray<UTurnInPlaceParams*> TurnInPlaceAnims;
 
 	UFUNCTION(BlueprintCallable)
+	void UpdateTurnInPlaceVelocityBuffer(float DeltaTime);
+
+	float GetAvarageVelocity();
+
+	UFUNCTION(BlueprintCallable)
 	void UpdateTurnInPlace(float deltaTime);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -235,7 +240,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetIsTurning(bool turning);
 
+	UPROPERTY(EditAnywhere)
+	float VelocityBufferTimeInterval {0.25};
 
+	UPROPERTY(EditAnywhere)
+	int VelocityBufferMax { 4 };
 
 private:
 
@@ -250,5 +259,11 @@ private:
 
 	UPROPERTY()
 	float CurrentTurningInPlaceWeight = 0;
+
+	UPROPERTY()
+	TArray<float> VelocityBuffer;
+
+	UPROPERTY()
+	float LastVelocityBufferTimeSpent;
 
 };

@@ -49,11 +49,20 @@ struct LAB_CHARACTER_API FTurnInPlaceState : public FLabAninmState
 public:
 
 	FTurnInPlaceState():FLabAninmState() {}
-	FTurnInPlaceState(UAnimSequence* anim, float progression = 0, bool transit = false, float playRate = 1):FLabAninmState(false)
+	FTurnInPlaceState(
+			UAnimSequence* anim
+		,	float progression = 0
+		,	bool transit = false
+		,	EAxis::Type axis = EAxis::Type::None
+		,	float playRate = 1
+		,	bool  posDirection = false
+	) :FLabAninmState(false)
 	, TurnAnim(anim)
 	, Progression(progression)
 	, TransitionOnFinishTurn(transit)
 	, PlayRate(playRate)
+	, Axis(axis)
+	, PositiveDirection(posDirection)
 	{}
 
 	UPROPERTY(BlueprintReadOnly)
@@ -67,4 +76,10 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	float PlayRate;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TEnumAsByte<EAxis::Type> Axis;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool PositiveDirection;
 };
