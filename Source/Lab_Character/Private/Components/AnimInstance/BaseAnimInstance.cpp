@@ -328,7 +328,8 @@ void UBaseAnimInstance::ApplyTurnInPlace()
 void UBaseAnimInstance::UnlockTurnInPlace()
 {
     this->IsLockedByTurnInPlace = false;
-    this->GetWorld()->GetTimerManager().ClearTimer(this->UnLockTurnInPlaceHandle);
+    //WARNING: this should not be called here, but if it is called, is better keep consistence
+    this->ClearUnlockTurnInPlaceTimer();
     UE_LOG(LogTemp, Log, TEXT("[TurnInPlace Debug] Turn unlocked"))
 }
 
