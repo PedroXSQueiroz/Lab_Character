@@ -266,4 +266,9 @@ private:
 	UPROPERTY()
 	float LastVelocityBufferTimeSpent;
 
+	void ClearUnlockTurnInPlaceTimer();
+
+	UPROPERTY()
+	FTimerHandle UnLockTurnInPlaceHandle;
+
 };

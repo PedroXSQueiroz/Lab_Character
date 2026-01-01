@@ -144,6 +144,5 @@ void ABaseCharacters::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		this->Bindings.Add(currentActionName, binding);
 
 	}
-
 }
 

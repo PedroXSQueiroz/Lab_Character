@@ -190,7 +190,7 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
     case EAxis::Type::Z: deviationScalar = deviation.Yaw; break;
     }
 
-    if ((!this->IsTurning || this->CurrentTurningState.IsNone))
+    if ((!this->IsTurning || this->CurrentTurningState.IsNone) && !this->IsLockedByTurnInPlace)
     {
         UTurnInPlaceParams* selectedTurnParams = NULL;
 
@@ -249,6 +249,11 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
             this->TargetTurningDirection.Normalize();
             this->IsLockedByTurnInPlace = true;
 
+            //WARNING: this should not be called here, but if it is called, is better keep consistence
+            this->ClearUnlockTurnInPlaceTimer();
+
+            UE_LOG(LogTemp, Log, TEXT("[TurnInPlace Debug] Playing turn: %s"), *selectedTurnParams->ParamName.ToString())
+
             return this->CurrentTurningState;
         }
         
@@ -257,10 +262,6 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
         this->CurrentTurningState = dummy;
         return dummy;
     }
-    /*else if(deviationScalar != 0)
-    {
-        this->ApplyTurnInPlace();
-    }*/
     
     return this->CurrentTurningState;
 }
@@ -286,27 +287,29 @@ void UBaseAnimInstance::ApplyTurnInPlace()
             this->DesiredForwardRotation
             : this->MovementState.CurrentVelocity.Rotation();
 
-        /*FRotator diffToTarget = UKismetMathLibrary::NormalizedDeltaRotator(this->InitialTurningDirection, currentTargetDirection);
+        /*FRotator diffToTarget = UKismetMathLibrary::NormalizedDeltaRotator(this->InitialTurningDirection, this->TargetTurningDirection);
 
-        FRotator currentTurnRot = this->InitialTurningDirection;
+        FRotator currentTurnRot = FRotator( this->InitialTurningDirection );
         switch (this->CurrentTurningState.Axis)
         {
         case EAxis::Type::X : {
             float diff = diffToTarget.Roll;
-            currentTurnRot.Roll += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : -1);
+            currentTurnRot.Roll += (diff * this->CurrentTurningState.Progression) * (diff < 0 ? 1 : -1);
         }
             break;
         case EAxis::Type::Y: {
             float diff = diffToTarget.Pitch;
-            currentTurnRot.Pitch += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : -1);
+            currentTurnRot.Pitch += (diff * this->CurrentTurningState.Progression) * (diff < 0 ? 1 : -1);
         }
             break;
         case EAxis::Type::Z: {
             float diff = diffToTarget.Yaw;
-            currentTurnRot.Yaw += (diff * this->CurrentTurningState.Progression) * (diff > 0 ? 1 : 1);
+            currentTurnRot.Yaw += (diff * this->CurrentTurningState.Progression) * (diff < 0 ? 1 : 1);
         }
             break;
-        }*/
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("Turn In Place diff to Target: %f, progression: %f"), diffToTarget.Yaw, this->CurrentTurningState.Progression)*/
 
         FRotator currentTurnRot = UKismetMathLibrary::RLerp(this->InitialTurningDirection, this->TargetTurningDirection, this->CurrentTurningState.Progression, true);
 
@@ -325,6 +328,8 @@ void UBaseAnimInstance::ApplyTurnInPlace()
 void UBaseAnimInstance::UnlockTurnInPlace()
 {
     this->IsLockedByTurnInPlace = false;
+    this->GetWorld()->GetTimerManager().ClearTimer(this->UnLockTurnInPlaceHandle);
+    UE_LOG(LogTemp, Log, TEXT("[TurnInPlace Debug] Turn unlocked"))
 }
 
 float UBaseAnimInstance::GetCurrentTurningInPlaceWeight()
@@ -363,18 +368,29 @@ void UBaseAnimInstance::SetIsTurning(bool turning)
                 this->IsTransiting = true;
             }
 
-            FTimerHandle unLockTurnInPlace;
+            //WARNING: this should not be called here, but if it is called, is better keep consistence
+            this->ClearUnlockTurnInPlaceTimer();
 
             GetWorld()
             ->GetTimerManager()
             .SetTimer(
-                unLockTurnInPlace,
+                this->UnLockTurnInPlaceHandle,
                 this,
                 &UBaseAnimInstance::UnlockTurnInPlace,
                 this->LockMarginTime,
                 false
             );
         }
+    }
+}
+
+void UBaseAnimInstance::ClearUnlockTurnInPlaceTimer()
+{
+    FTimerManager& currentTimeManager = this->GetWorld()->GetTimerManager();
+
+    if (currentTimeManager.IsTimerActive(this->UnLockTurnInPlaceHandle)) 
+    {
+        currentTimeManager.ClearTimer(this->UnLockTurnInPlaceHandle);
     }
 }
 
