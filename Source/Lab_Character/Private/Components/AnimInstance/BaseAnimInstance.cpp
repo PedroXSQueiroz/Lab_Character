@@ -84,6 +84,57 @@ TArray<FIKState> UBaseAnimInstance::GetCurrentIKStates()
     return ikStates;
 }
 
+void UBaseAnimInstance::UpdateIKCurvesOverrides()
+{
+    for (UIKParams* param : this->IKParams)
+    {
+        if (param->WeightProvider && param->WeightProvider->IsA(UWeightByAnimCurveProvider::StaticClass()))
+        {
+            UWeightByAnimCurveProvider* weightProvider = Cast<UWeightByAnimCurveProvider>(param->WeightProvider);
+            float rawWeight = weightProvider->GetCurrentWeight();
+
+            if (!this->CurrentTurningState.IsNone &&
+                (this->CurrentTurningState.IKUsage == EIKForTurnInPlace::CLEAN
+                    || this->CurrentTurningState.IKUsage == EIKForTurnInPlace::NONE)
+                )
+            {
+                UE_LOG(LogTemp, Log, TEXT("[IKOverride] Overriding IK weights"))
+                
+                if (!this->IKCurvesOverrides.Contains(weightProvider->CurveName))
+                {
+                    this->IKCurvesOverrides.Add(weightProvider->CurveName, rawWeight);
+                }
+                else
+                {
+                    float previewsWeight = this->IKCurvesOverrides[weightProvider->CurveName];
+                    this->IKCurvesOverrides[weightProvider->CurveName] = FMath::Lerp(previewsWeight, 0, this->IKWeightOverrideLerp);
+                }
+            }
+            else if(this->IKCurvesOverrides.Contains(weightProvider->CurveName))
+            {
+                UE_LOG(LogTemp, Log, TEXT("[IKOverride] Overriding removing IK overrride"))
+                
+                float previewsWeight = this->IKCurvesOverrides[weightProvider->CurveName];
+
+                if (FMath::IsNearlyEqual(previewsWeight, rawWeight)) 
+                {
+                    this->IKCurvesOverrides.Remove(weightProvider->CurveName);
+                }
+                else 
+                {
+                    this->IKCurvesOverrides[weightProvider->CurveName] = FMath::Lerp(previewsWeight, rawWeight, this->IKWeightOverrideLerp);
+                }
+            }
+        }
+    }
+    
+}
+
+TMap<FName, float> UBaseAnimInstance::GetIKCurvesOverrides()
+{
+    return this->IKCurvesOverrides;
+}
+
 FIKState UBaseAnimInstance::GetCurrentIKStateByName(FName name, bool& found)
 {
     found = this->IKStatesCache.Contains(name);
@@ -238,7 +289,8 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
                 selectedTurnParams->TransitionOnFinish, 
                 selectedTurnParams->DeviationAxis,
                 selectedTurnParams->PlayRate,
-                deviationScalar > 0
+                deviationScalar > 0,
+                selectedTurnParams->IKUsage
             );
             this->CurrentTurningState.Progression = this->GetCurrentTurningInPlaceWeight();
             this->InitialTurningDirection = this->GetOwningActor()->GetActorRotation();
@@ -263,6 +315,11 @@ FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceByAxis(EAxis::Type axis, FRot
         return dummy;
     }
     
+    return this->CurrentTurningState;
+}
+
+FTurnInPlaceState UBaseAnimInstance::GetTurnInPlaceCached()
+{
     return this->CurrentTurningState;
 }
 

@@ -7,6 +7,16 @@
 #include "Data/LabAnimParams.h"
 
 #include "TurnInPlaceAnim.generated.h"
+
+UENUM(BlueprintType)
+enum class EIKForTurnInPlace : uint8 {
+
+	COMPLETE = 0,
+	CLEAN = 1,
+	NONE = 3
+};
+
+
 /**
  * 
  */
@@ -38,6 +48,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool TransitionOnFinish;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	EIKForTurnInPlace IKUsage { EIKForTurnInPlace::COMPLETE };
+
 };
 
 USTRUCT(BlueprintType, Blueprintable)
@@ -56,6 +69,7 @@ public:
 		,	EAxis::Type axis = EAxis::Type::None
 		,	float playRate = 1
 		,	bool  posDirection = false
+		,	EIKForTurnInPlace ikUsage = EIKForTurnInPlace::COMPLETE
 	) :FLabAninmState(false)
 	, TurnAnim(anim)
 	, Progression(progression)
@@ -63,6 +77,7 @@ public:
 	, PlayRate(playRate)
 	, Axis(axis)
 	, PositiveDirection(posDirection)
+	, IKUsage(ikUsage)
 	{}
 
 	UPROPERTY(BlueprintReadOnly)
@@ -82,4 +97,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool PositiveDirection;
+
+	UPROPERTY(BlueprintReadOnly)
+	EIKForTurnInPlace IKUsage;
 };

@@ -136,6 +136,15 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FIKState> GetCurrentIKStates();
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateIKCurvesOverrides();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|IKs")
+	float IKWeightOverrideLerp;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TMap<FName, float> GetIKCurvesOverrides();
 	
 	FIKState GetCurrentIKStateByName(FName name, bool& found);
 
@@ -143,6 +152,9 @@ private:
 
 	UPROPERTY()
 	TMap<FName, FIKState> IKStatesCache;
+
+	UPROPERTY()
+	TMap<FName, float> IKCurvesOverrides;
 	
 	//----------------------------------------------------------------------
 	//IK ROOT
@@ -215,6 +227,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FTurnInPlaceState GetTurnInPlaceByAxis(EAxis::Type axis, FRotator deviation, float velocity);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FTurnInPlaceState GetTurnInPlaceCached();
 
 	UFUNCTION(BlueprintCallable)
 	void ApplyTurnInPlace();
