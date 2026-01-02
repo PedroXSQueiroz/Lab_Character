@@ -76,7 +76,16 @@ FTransform UIKParamsByTrace::GetEffectorTransform(
         FVector nonLockedDealocation    = newLocation + dealocation;
         FVector lockedDealocation       = ( nonLockedDealocation * this->TraceDirection) + ( previewsTransform.GetLocation() * reverseMask );
         FVector finalLocation           = FMath::Lerp(nonLockedDealocation, lockedDealocation, weight);
+        
         distance = FVector::Distance(startTraceLocation, hittedData.ImpactPoint);
+        float distanceFromCenter = FVector::Distance(anim->GetOwningActor()->GetActorLocation(), finalLocation);
+
+        //WARNING: this should not be happenning, this is a failsafe but the real reason for this error have to be found
+        if (distanceFromCenter > this->StartPointDistance * 2)
+        {
+            UE_LOG(LogTemp, Log, TEXT("[IK] WEIRD FINAL LOCATION %s => %.2f"), *finalLocation.ToString(), distanceFromCenter);
+            finalLocation = newLocation;
+        }
 
         if (this->DebugTraces) 
         {
@@ -105,10 +114,16 @@ FTransform UIKParamsByTrace::GetEffectorTransform(
             effectorRotation.Roll = newRotation.Roll;
         }
 
+        if (this->DebugTraces) 
+        {
+            UE_LOG(LogTemp, Log, TEXT("[IK] final location: %s | target: %s"), *finalLocation.ToString(), *hittedData.ImpactPoint.ToString())
+        }
+
         return FTransform(
             FQuat::Identity,
             finalLocation
         );
+
     }
 	
 	return FTransform(
