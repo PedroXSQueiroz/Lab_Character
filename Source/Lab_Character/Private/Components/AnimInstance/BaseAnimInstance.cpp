@@ -95,7 +95,7 @@ FIKState UBaseAnimInstance::GetCurrentIKStateByName(FName name, bool& found)
     return FIKState();
 }
 
-TArray<FIKRootState> UBaseAnimInstance::UpdateCurrentIKRootStates()
+TArray<FIKRootState> UBaseAnimInstance::UpdateCurrentIKRootStates(float DeltaTime)
 {
     TArray<FIKRootState> states;
 
@@ -103,7 +103,7 @@ TArray<FIKRootState> UBaseAnimInstance::UpdateCurrentIKRootStates()
     {
         if (params && params->Enabled) 
         {
-            FIKRootState currentState = params->GetCurrentRootTransform(this);
+            FIKRootState currentState = params->GetCurrentRootTransform(this, DeltaTime);
 
             states.Add(currentState);
             this->IKRootsStatesCache.Add(params->Name, currentState);

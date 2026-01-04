@@ -154,7 +154,7 @@ public:
 	TArray<UIKRootParams*> IKRootParams;
 	
 	UFUNCTION(BlueprintCallable)
-	TArray<FIKRootState> UpdateCurrentIKRootStates();
+	TArray<FIKRootState> UpdateCurrentIKRootStates(float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FIKRootState> GetCurrentRootIKStates();

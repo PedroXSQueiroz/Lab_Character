@@ -7,6 +7,7 @@
 
 #include "Data/LabAnimParams.h"
 
+
 #include "IKRootParams.generated.h"
 
 class UBaseAnimInstance;
@@ -23,7 +24,8 @@ public:
 	FIKRootState(
 		FName boneName,
 		FName rootParamName,
-		FTransform transform
+		FTransform transform,
+		FVector springVelocity = FVector::ZeroVector
 	)	: BoneName(boneName)
 		, RootParamName(rootParamName)
 		, Transform(transform)
@@ -38,6 +40,9 @@ public:
 
 	UPROPERTY()
 	FTransform Transform;
+
+	UPROPERTY()
+	FVector SpringLerpVelocity;
 };
 
 /**
@@ -63,7 +68,14 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
 	FVector DealocationDirection;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float SmoothTime;
 
-	FIKRootState GetCurrentRootTransform(UBaseAnimInstance* anim);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Params")
+	float SmoothRatio;
+
+	FIKRootState GetCurrentRootTransform(UBaseAnimInstance* anim, float DeltaTime);
+
 	
 };

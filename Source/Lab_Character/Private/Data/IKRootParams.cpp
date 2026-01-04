@@ -4,12 +4,13 @@
 #include "Data/IKRootParams.h"
 
 #include "Kismet/KismetMathLibrary.h"
+#include "Math/UnrealMathUtility.h"
 
 #include "Data/IKParams.h"
 #include "Components/AnimInstance/BaseAnimInstance.h"
 
 #pragma optimize("", off)
-FIKRootState UIKRootParams::GetCurrentRootTransform(UBaseAnimInstance* anim)
+FIKRootState UIKRootParams::GetCurrentRootTransform(UBaseAnimInstance* anim, float DeltaTime)
 {
 	TArray<FIKState> iks = anim->GetCurrentIKStates();
 
@@ -65,6 +66,50 @@ FIKRootState UIKRootParams::GetCurrentRootTransform(UBaseAnimInstance* anim)
 	finalDealocation /= dealocations.Num();*/
 
 	FVector finalDealocation = this->DealocationDirection * maxExceedingDistance;
+	FIKRootState* previewsState = anim->GetCurrentRootIKStates().FindByPredicate([&](FIKRootState state) { return state.RootParamName.IsEqual(this->Name); });
+	FVector currentSpringVelocity = FVector::ZeroVector;
+
+	if (previewsState) 
+	{
+		FVector currentLocation = previewsState->Transform.GetLocation();
+		FVector previewsLocationRate = this->DealocationDirection;
+		currentSpringVelocity = previewsState->SpringLerpVelocity;
+		
+		/*FMath::SpringDamperSmoothing<FVector>(
+			currentLocation,
+			currentSpringVelocity,
+			finalDealocation * this->DealocationDirection,
+			FVector::ZeroVector,
+			DeltaTime,
+			this->SmoothTime,
+			this->SmoothRatio
+		);*/
+		//finalDealocation = currentLocation;
+
+		float TargetScalar = FVector::DotProduct(finalDealocation, DealocationDirection);
+		float CurrentScalar = FVector::DotProduct(currentLocation, DealocationDirection);
+		float VelocityScalar = FVector::DotProduct(currentSpringVelocity, DealocationDirection);
+
+		FMath::SpringDamperSmoothing<float>(
+			CurrentScalar,
+			VelocityScalar,
+			maxExceedingDistance,
+			0.f,
+			DeltaTime,
+			SmoothTime,
+			SmoothRatio
+		);
+
+		finalDealocation = DealocationDirection * CurrentScalar;
+		currentSpringVelocity = DealocationDirection * VelocityScalar;
+	}
+	
+	if (currentSpringVelocity.SizeSquared() < 0.01f &&
+		finalDealocation.SizeSquared() < 0.01f)
+	{
+		finalDealocation = FVector::ZeroVector;
+		currentSpringVelocity = FVector::ZeroVector;
+	}
 
 	if (this->Debug) 
 	{
@@ -84,7 +129,7 @@ FIKRootState UIKRootParams::GetCurrentRootTransform(UBaseAnimInstance* anim)
 		this->Name,
 		FTransform(
 			finalDealocation
-		)
+		), currentSpringVelocity
 	);
 }
 #pragma optimize("", on)
