@@ -29,13 +29,14 @@ void UBaseAnimInstance::UpdateMovementState()
     this->MovementState.VelocityScale = this->MovementState.CurrentVelocity.Length() / this->MaxVelocity;
 }
 
-TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
+TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates(float DeltaTime)
 {
     TArray<FIKState> states = TArray<FIKState>();
     try 
     {
         for (UIKParams* currentParams : this->IKParams)
         {
+            
             bool uncached = currentParams && !this->IKStatesCache.Contains(currentParams->Name);
             
             if (currentParams && currentParams->Enabled)
@@ -44,6 +45,31 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
                 {
         
                     FIKState currentIKState = currentParams->GetIKState(this);
+                    
+                    if (    this->IsIKFixedSmoothing 
+                        &&  this->IKStatesFixedCache.Contains(currentParams->Name)
+                        &&  currentParams->IsA(UIKParamsByTrace::StaticClass()))
+                    {
+                        //FIMXE: GET THIS REFERENCE SHOULD BE MORE GENERIC
+                        UIKParamsByTrace* ikByTrace = Cast<UIKParamsByTrace>(currentParams);
+
+                        FVector rawEffectorLocation = this->GetSkelMeshComponent()->GetSocketTransform(
+                            ikByTrace->Reference,
+                            ERelativeTransformSpace::RTS_Component
+                        ).GetLocation();
+                        
+                        FVector smoothedLocation = FMath::Lerp(
+                            this->IKStatesFixedCache[currentParams->Name].EffectorRelativeTransform.GetLocation(),
+                            rawEffectorLocation,
+                            FMath::Clamp( 
+                                this->IKFixedTimeElapsed /this->IKFixedSmoothingTime
+                                , 0, 1
+                            )
+                        );
+
+                        currentIKState.EffectorRelativeTransform.SetLocation(smoothedLocation);
+                        
+                    }
 
                     states.Add(currentIKState);
 
@@ -64,6 +90,11 @@ TArray<FIKState> UBaseAnimInstance::UpdateCurrentIKsStates()
                     this->IKStatesCache.Remove(currentParams->Name);
                 }
             }
+        }
+
+        if (this->IsIKFixedSmoothing) 
+        {
+            this->IKFixedTimeElapsed += DeltaTime;
         }
     
     }
@@ -93,6 +124,27 @@ FIKState UBaseAnimInstance::GetCurrentIKStateByName(FName name, bool& found)
     }
 
     return FIKState();
+}
+
+void UBaseAnimInstance::StartFixedIKSmoothing()
+{
+    this->IsIKFixedSmoothing = true;
+    this->IKFixedTimeElapsed = 0;
+    this->IKStatesFixedCache = TMap<FName, FIKState>(this->IKStatesCache);
+
+    FTimerHandle handler;
+    this->GetWorld()->GetTimerManager().SetTimer(
+        handler,
+        this,
+        &UBaseAnimInstance::EndFixedIKSmoothing,
+        this->IKFixedSmoothingTime,
+        false
+    );
+}
+
+void UBaseAnimInstance::EndFixedIKSmoothing()
+{
+    this->IsIKFixedSmoothing = false;
 }
 
 TArray<FIKRootState> UBaseAnimInstance::UpdateCurrentIKRootStates(float DeltaTime)

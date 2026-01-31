@@ -132,17 +132,36 @@ public:
 	void InitIKParams();
 
 	UFUNCTION(BlueprintCallable)
-	TArray<FIKState> UpdateCurrentIKsStates();
+	TArray<FIKState> UpdateCurrentIKsStates(float DeltaTime);
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FIKState> GetCurrentIKStates();
 	
 	FIKState GetCurrentIKStateByName(FName name, bool& found);
 
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void StartFixedIKSmoothing();
+
+	UFUNCTION()
+	void EndFixedIKSmoothing();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings|IKs")
+	float IKFixedSmoothingTime { 0.5 };
+
 private:
+	
+	UPROPERTY()
+	bool IsIKFixedSmoothing {false};
+
+	UPROPERTY()
+	float IKFixedTimeElapsed {0};
 
 	UPROPERTY()
 	TMap<FName, FIKState> IKStatesCache;
+
+	UPROPERTY()
+	TMap<FName, FIKState> IKStatesFixedCache;
+
 	
 	//----------------------------------------------------------------------
 	//IK ROOT
