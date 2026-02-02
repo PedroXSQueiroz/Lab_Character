@@ -128,18 +128,21 @@ FIKState UBaseAnimInstance::GetCurrentIKStateByName(FName name, bool& found)
 
 void UBaseAnimInstance::StartFixedIKSmoothing()
 {
-    this->IsIKFixedSmoothing = true;
-    this->IKFixedTimeElapsed = 0;
-    this->IKStatesFixedCache = TMap<FName, FIKState>(this->IKStatesCache);
+    if (!this->IsIKFixedSmoothing)
+    {
+        this->IsIKFixedSmoothing = true;
+        this->IKFixedTimeElapsed = 0;
+        this->IKStatesFixedCache = TMap<FName, FIKState>(this->IKStatesCache);
 
-    FTimerHandle handler;
-    this->GetWorld()->GetTimerManager().SetTimer(
-        handler,
-        this,
-        &UBaseAnimInstance::EndFixedIKSmoothing,
-        this->IKFixedSmoothingTime,
-        false
-    );
+        FTimerHandle handler;
+        this->GetWorld()->GetTimerManager().SetTimer(
+            handler,
+            this,
+            &UBaseAnimInstance::EndFixedIKSmoothing,
+            this->IKFixedSmoothingTime,
+            false
+        );
+    }
 }
 
 void UBaseAnimInstance::EndFixedIKSmoothing()

@@ -7,6 +7,8 @@
 
 #include "Entities/Characters/BaseCharacters.h"
 
+#pragma optimize("", off)
+
 bool ULabCharacterWithLocomotionState::CharacterInit(ABaseCharacters* charac)
 {
 	
@@ -21,7 +23,6 @@ void ULabCharacterWithLocomotionState::StatefullTick(AActor* actor, float DeltaT
 	//DOES NOTHING
 }
 
-#pragma optimize("", off)
 void ULabCharacterWithLocomotionState::Move(const FInputActionValue& moveAction)
 {
 	FVector2D movement = moveAction.Get<FVector2D>();
@@ -71,8 +72,6 @@ void ULabCharacterWithLocomotionState::ApplyMovement(FVector2D movement)
 	}
 }
 
-#pragma optimize("", on)
-
 void ULabCharacterWithLocomotionState::Look(const FInputActionValue& lookAction)
 {
 	FVector2D look = lookAction.Get<FVector2D>();
@@ -84,4 +83,6 @@ void ULabCharacterWithLocomotionState::ApplyLook(FVector2D look)
 	this->GetCharacter()->AddControllerYawInput(look.X);
 	this->GetCharacter()->AddControllerPitchInput(look.Y);
 }
+
+#pragma optimize("", on)
 
